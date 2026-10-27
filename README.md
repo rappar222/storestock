@@ -1,38 +1,80 @@
-# 🏪 StoreStock — Real-Time Multi-Store Inventory Engine
+# 🏪 StoreStock — Real-Time Multi-Store Inventory & Store Map Engine
 
-**StoreStock** is a unified real-time inventory and stock search engine. Type any product—from enterprise workstations & GPUs (like **NVIDIA A6000 / RTX**) to daily **groceries & hypermarket goods** (milk, coffee, essentials)—and StoreStock checks store availability in parallel.
-
-## 🚀 Live Demo & Testing
-The engine is currently running on **Port 3000**:
-* **Web Dashboard**: [http://localhost:3000](http://localhost:3000)
-* **REST Search API**: `GET /api/search?q={query}&country={country_code}`
-* **Server-Sent Events (SSE) Live Stream**: `GET /api/stream?q={query}&country={country_code}`
-* **Countries Registry**: `GET /api/countries`
+StoreStock is a high-performance inventory search engine and physical shelf tracker. Search any product—from enterprise hardware (**NVIDIA RTX A6000 / 5090**) to daily **groceries & essentials**—and StoreStock queries live retailer APIs and physical branches in parallel.
 
 ---
 
-## ⚡ Active Providers in Core Engine
-1. **eMAG (RO)**: Romania's #1 marketplace (everything from electronics to groceries).
-2. **Altex (RO)**: High-speed native JSON search engine via Fenrir API.
-3. **Media Galaxy (RO)**: Sister electronics retailer.
-4. **PC Garage (RO)**: Specialized PC, workstation, and GPU stock levels (`Stoc magazin suficient`, `Stoc depozit`, `Stoc epuizat`).
-5. **Flanco (RO)**: Tech & appliances retailer with in-store pickup & delivery.
-6. **Auchan Hypermarket (RO)**: Live grocery & hypermarket catalog with exact inventory quantities (`AvailableQuantity`).
-7. **Amazon Direct (Global/EU)**: Multi-locale support for Europe (DE/UK) and US.
+## ✨ Features
+
+- **⚡ Sub-Second Parallel Fan-Out:** Queries eMAG, Altex, Media Galaxy, PC Garage, Flanco, evoMAG, Auchan, Glovo, and Amazon simultaneously via `asyncio`.
+- **📍 Physical Store Shelf Stock & OpenStreetMap:** Automatically calculates driving distances (in km) to nearby retail branches and plots in-stock shelf items on Leaflet OpenStreetMap (zero API key required).
+- **🤖 AI Intent & Semantic Disambiguation:** Distinguishes standalone discrete graphics cards from 250,000+ RON prebuilt server racks and demotes cables/accessories.
+- **🔔 Restock Watchlist & Background Monitoring:** Set target price ceilings and receive instant restock alerts via `/api/alerts`.
+- **🛡️ Anti-Bot & TLS Impersonation:** Built with `curl_cffi` using Chrome 124 JA3/JA4 fingerprint emulation to bypass Cloudflare/Akamai bot detection.
 
 ---
 
-## 🛠️ Architecture Highlights
-* **Zero TLS Fingerprint Blocking**: Powered by `curl_cffi` browser impersonation (Chrome 124 TLS JA3/JA4 emulation).
-* **Parallel Asynchronous Fan-Out**: Fires all store connectors concurrently via `asyncio`.
-* **Server-Sent Events (SSE)**: Results stream into the UI store-by-store in milliseconds without waiting for the slowest store.
-* **Top 49 Countries Registry**: Extensible adapter pattern ready for multi-national scaling.
+## 🐳 Quick Start with Docker (Recommended)
 
----
+### Using Docker Compose
 
-## 🏁 Starting the Server
 ```bash
-./run.sh
-# or manually:
-./venv/bin/python server.py
+# Clone the repository
+git clone https://github.com/your-username/storestock.git
+cd storestock
+
+# Build and start in detached mode
+docker compose up -d --build
 ```
+
+The app will be available at **http://localhost:3000**.
+
+To view logs or stop:
+```bash
+docker compose logs -f
+docker compose down
+```
+
+### Using Standard Docker CLI
+
+```bash
+# Build the Docker image
+docker build -t storestock .
+
+# Run container on port 3000
+docker run -d --name storestock -p 3000:3000 --restart unless-stopped storestock
+```
+
+---
+
+## 💻 Local Development (Without Docker)
+
+### Prerequisites
+- Python 3.10+
+- Linux / macOS / WSL2
+
+```bash
+# Set up virtual environment and run
+bash run.sh
+
+# Or manually:
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python server.py
+```
+
+---
+
+## 🔌 API Endpoints
+
+- **Live UI:** `http://localhost:3000`
+- **SSE Real-time Stream:** `GET /api/stream?q={query}&country={country_code}&lat={lat}&lon={lon}`
+- **JSON Search:** `GET /api/search?q={query}&country={country_code}&lat={lat}&lon={lon}`
+- **Restock Alerts:** `GET /api/alerts` | `POST /api/alerts` | `DELETE /api/alerts/{id}`
+- **Supported Countries:** `GET /api/countries`
+
+---
+
+## 📄 License
+MIT License

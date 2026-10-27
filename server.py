@@ -1,15 +1,16 @@
 import os
 import json
 import asyncio
-from fastapi import FastAPI, Query
+from typing import Optional
+from fastapi import FastAPI, Query, HTTPException, Body
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from core.engine import SearchEngine
 from core.countries import COUNTRIES_REGISTRY
-from core.schema import SearchResponse
+from core.schema import SearchResponse, RestockAlert
 
-app = FastAPI(title="StoreStock Core Engine", version="1.0.0")
+app = FastAPI(title="StoreStock Core Engine", version="1.1.0")
 
 # Enable CORS for external client/API testing
 app.add_middleware(
@@ -39,26 +40,26 @@ async def get_countries():
 @app.get("/api/search", response_model=SearchResponse)
 async def search_endpoint(
     q: str = Query(..., description="Product query to search"),
-    country: str = Query("RO", description="ISO 2-letter country code")
+    country: str = Query("RO", description="ISO 2-letter country code"),
+    lat: Optional[float] = Query(None, description="User latitude for distance calculation"),
+    lon: Optional[float] = Query(None, description="User longitude for distance calculation")
 ):
-    return await engine.search_all(q, country_code=country)
+    return await engine.search_all(q, country_code=country, user_lat=lat, user_lon=lon)
 
 @app.get("/api/stream")
 async def stream_endpoint(
     q: str = Query(..., description="Product query to search"),
-    country: str = Query("RO", description="ISO 2-letter country code")
+    country: str = Query("RO", description="ISO 2-letter country code"),
+    lat: Optional[float] = Query(None, description="User latitude for distance calculation"),
+    lon: Optional[float] = Query(None, description="User longitude for distance calculation")
 ):
     """
     Server-Sent Events (SSE) streaming endpoint:
     Streams results from each store as soon as that store's response completes.
     """
     async def event_generator():
-        async for provider_res in engine.stream_search(q, country_code=country):
-            payload = {
-                "type": "provider_result",
-                "payload": provider_res
-            }
-            yield f"data: {json.dumps(payload)}\n\n"
+        async for event in engine.stream_search(q, country_code=country, user_lat=lat, user_lon=lon):
+            yield f"data: {json.dumps(event)}\n\n"
         # Done event
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
@@ -72,6 +73,43 @@ async def stream_endpoint(
         }
     )
 
+# --- Restock Alerts Endpoints ---
+
+@app.get("/api/alerts", response_model=list[RestockAlert])
+async def list_alerts():
+    return engine.alert_manager.get_all_alerts()
+
+@app.post("/api/alerts", response_model=RestockAlert)
+async def create_alert(payload: dict = Body(...)):
+    query = payload.get("query")
+    store_name = payload.get("store_name", "All Stores")
+    target_price = payload.get("target_price")
+    email = payload.get("email", "user@example.com")
+    product_title = payload.get("product_title")
+    product_url = payload.get("product_url")
+
+    if not query:
+        raise HTTPException(status_code=400, detail="Query is required")
+
+    return engine.alert_manager.create_alert(
+        query=query,
+        store_name=store_name,
+        target_price=target_price,
+        email=email,
+        product_title=product_title,
+        product_url=product_url
+    )
+
+@app.delete("/api/alerts/{alert_id}")
+async def delete_alert(alert_id: str):
+    success = engine.alert_manager.delete_alert(alert_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return {"status": "deleted", "id": alert_id}
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=3000, reload=True)
+    import sys
+    port = int(os.environ.get("PORT", sys.argv[1] if len(sys.argv) > 1 else 3000))
+    print(f"Starting StoreStock on http://localhost:{port} ...")
+    uvicorn.run("server:app", host="0.0.0.0", port=port, reload=True)

@@ -4,12 +4,14 @@ set -e
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 cd "$DIR"
 
-if [ ! -d "venv" ]; then
-    echo "Creating virtual environment..."
+if [ ! -x "venv/bin/python" ]; then
+    echo "Virtual environment missing or broken, recreating..."
+    rm -rf venv
     python3 -m venv venv
     ./venv/bin/pip install --upgrade pip
-    ./venv/bin/pip install fastapi uvicorn httpx beautifulsoup4 pydantic curl_cffi
+    ./venv/bin/pip install -r requirements.txt
 fi
 
-echo "Starting StoreStock Core Engine on http://localhost:3000..."
-./venv/bin/python server.py
+PORT="${PORT:-3000}"
+echo "Starting StoreStock Core Engine on http://localhost:$PORT..."
+./venv/bin/python server.py "$PORT"

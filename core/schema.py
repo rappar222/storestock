@@ -33,6 +33,11 @@ class StoreResult(BaseModel):
     brand: Optional[str] = None
     sku: Optional[str] = None
     delivery_info: Optional[str] = None
+    store_branch: Optional[str] = None
+    store_address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    distance_km: Optional[float] = None
 
 class SearchResponse(BaseModel):
     query: str
@@ -41,4 +46,18 @@ class SearchResponse(BaseModel):
     in_stock_count: int
     execution_time_ms: float
     stores_searched: List[str]
+    ai_intent: Optional[dict] = None
     results: List[StoreResult]
+
+class RestockAlert(BaseModel):
+    id: str
+    query: str
+    store_name: str
+    target_price: Optional[float] = None
+    email: Optional[str] = None
+    product_title: Optional[str] = None
+    product_url: Optional[str] = None
+    is_triggered: bool = False
+    created_at: str
+    last_status: str = "Out of Stock"
+    last_checked: Optional[str] = None

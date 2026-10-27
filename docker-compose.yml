@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  storestock:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: storestock
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+    volumes:
+      # Persist watchlist & restock alerts database across container restarts
+      - ./alerts_db.json:/app/alerts_db.json
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
