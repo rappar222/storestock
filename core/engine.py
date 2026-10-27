@@ -17,6 +17,15 @@ from providers.ro.auchan import AuchanProvider
 from providers.ro.evomag import EvoMagProvider
 from providers.ro.glovo_express import GlovoExpressProvider
 from providers.global_platforms.amazon import AmazonProvider
+from providers.global_platforms.aliexpress import AliExpressProvider
+from providers.global_platforms.temu import TemuProvider
+from providers.global_platforms.alibaba import AlibabaProvider
+from providers.us.microcenter import MicroCenterProvider
+from providers.us.bestbuy import BestBuyProvider
+from providers.us.walmart import WalmartProvider
+from providers.au.scorptec import ScorptecProvider
+from providers.au.jbhifi import JBHiFiProvider
+from providers.cars.auto_market import AutoMarketProvider
 
 class SearchEngine:
     def __init__(self):
@@ -32,16 +41,44 @@ class SearchEngine:
                 EvoMagProvider(),
                 AuchanProvider(),
                 GlovoExpressProvider(),
-                AmazonProvider("RO")
+                AmazonProvider("RO"),
+                AliExpressProvider("RO"),
+                TemuProvider("RO"),
+                AlibabaProvider("RO"),
+                AutoMarketProvider("RO")
             ],
             "US": [
-                AmazonProvider("US")
+                MicroCenterProvider(),
+                BestBuyProvider(),
+                WalmartProvider(),
+                AmazonProvider("US"),
+                AliExpressProvider("US"),
+                TemuProvider("US"),
+                AlibabaProvider("US"),
+                AutoMarketProvider("US")
+            ],
+            "AU": [
+                ScorptecProvider(),
+                JBHiFiProvider(),
+                AmazonProvider("AU"),
+                AliExpressProvider("AU"),
+                TemuProvider("AU"),
+                AlibabaProvider("AU"),
+                AutoMarketProvider("AU")
             ],
             "DE": [
-                AmazonProvider("DE")
+                AmazonProvider("DE"),
+                AliExpressProvider("DE"),
+                TemuProvider("DE"),
+                AlibabaProvider("DE"),
+                AutoMarketProvider("DE")
             ],
             "GB": [
-                AmazonProvider("GB")
+                AmazonProvider("GB"),
+                AliExpressProvider("GB"),
+                TemuProvider("GB"),
+                AlibabaProvider("GB"),
+                AutoMarketProvider("GB")
             ]
         }
         self._cache: Dict[str, tuple[float, List[StoreResult], Dict]] = {}
@@ -51,7 +88,13 @@ class SearchEngine:
         code = country_code.upper()
         if code in self.providers:
             return self.providers[code]
-        return [AmazonProvider(code)]
+        return [
+            AmazonProvider(code),
+            AliExpressProvider(code),
+            TemuProvider(code),
+            AlibabaProvider(code),
+            AutoMarketProvider(code)
+        ]
 
     async def search_all(
         self,

@@ -52,6 +52,39 @@ STORE_BRANCHES: Dict[str, List[Dict]] = {
     ],
     "evoMAG": [
         {"name": "evoMAG Showroom Mihai Bravu", "address": "Șoseaua Mihai Bravu 251-253, București", "lat": 44.4324, "lon": 26.1365}
+    ],
+    "Amazon Australia": [
+        {"name": "Amazon Hub & Fulfilment Sydney (BWU2)", "address": "Kemps Creek, Sydney NSW", "lat": -33.8760, "lon": 150.7760},
+        {"name": "Amazon Fulfilment Centre Melbourne (MEL1)", "address": "Dandenong South, Melbourne VIC", "lat": -38.0300, "lon": 145.2100},
+        {"name": "Amazon Fulfilment Centre Brisbane (BNE1)", "address": "Lytton, Brisbane QLD", "lat": -27.4200, "lon": 153.1500},
+        {"name": "Amazon Fulfilment Centre Perth (PER1)", "address": "Jandakot, Perth WA", "lat": -32.1100, "lon": 115.8600}
+    ],
+    "Micro Center": [
+        {"name": "Micro Center Brooklyn", "address": "850 3rd Ave, Brooklyn, NY 11232", "lat": 40.6582, "lon": -74.0041},
+        {"name": "Micro Center Queens", "address": "34-40 48th St, Long Island City, NY 11104", "lat": 40.7516, "lon": -73.9142},
+        {"name": "Micro Center Boston / Cambridge", "address": "730 Memorial Dr, Cambridge, MA 02139", "lat": 42.3575, "lon": -71.1118},
+        {"name": "Micro Center Chicago", "address": "2645 N Elston Ave, Chicago, IL 60647", "lat": 41.9298, "lon": -87.6836},
+        {"name": "Micro Center Tustin (LA)", "address": "1100 E Edinger Ave, Tustin, CA 92780", "lat": 33.7277, "lon": -117.8427},
+        {"name": "Micro Center Dallas", "address": "13929 N Central Expy, Dallas, TX 75243", "lat": 32.9372, "lon": -96.7512}
+    ],
+    "Best Buy": [
+        {"name": "Best Buy Union Square (NYC)", "address": "One Union Square S, New York, NY 10003", "lat": 40.7350, "lon": -73.9910},
+        {"name": "Best Buy West LA", "address": "11301 W Pico Blvd, Los Angeles, CA 90064", "lat": 34.0326, "lon": -118.4419},
+        {"name": "Best Buy Chicago Michigan Ave", "address": "875 N Michigan Ave, Chicago, IL 60611", "lat": 41.8988, "lon": -87.6241}
+    ],
+    "Walmart": [
+        {"name": "Walmart Supercenter Secaucus", "address": "400 Park Pl, Secaucus, NJ 07094", "lat": 40.7963, "lon": -74.0538},
+        {"name": "Walmart Supercenter Burbank", "address": "1301 N Victory Pl, Burbank, CA 91502", "lat": 34.1852, "lon": -118.3242}
+    ],
+    "Scorptec Computers": [
+        {"name": "Scorptec Auburn (Sydney)", "address": "Unit 2, 264-272 Parramatta Rd, Auburn NSW 2144", "lat": -33.8500, "lon": 151.0330},
+        {"name": "Scorptec Clayton (Melbourne)", "address": "Unit 6, 20 Duerdin St, Clayton VIC 3168", "lat": -37.9120, "lon": 145.1430},
+        {"name": "Scorptec Macquarie Park", "address": "10 Julius Ave, North Ryde NSW 2113", "lat": -33.7850, "lon": 151.1350}
+    ],
+    "JB Hi-Fi": [
+        {"name": "JB Hi-Fi The Galeries Sydney CBD", "address": "500 George St, Sydney NSW 2000", "lat": -33.8728, "lon": 151.2075},
+        {"name": "JB Hi-Fi Bourke St Melbourne", "address": "206 Bourke St, Melbourne VIC 3000", "lat": -37.8124, "lon": 144.9671},
+        {"name": "JB Hi-Fi Brisbane City", "address": "Queen St Mall, Brisbane QLD 4000", "lat": -27.4695, "lon": 153.0255}
     ]
 }
 

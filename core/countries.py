@@ -7,14 +7,14 @@ COUNTRIES_REGISTRY: Dict[str, Dict[str, Any]] = {
         "flag": "🇷🇴",
         "currency": "RON",
         "locale": "ro_RO",
-        "stores": ["eMAG", "Altex", "Media Galaxy", "PC Garage", "Flanco", "Auchan", "Amazon EU"]
+        "stores": ["eMAG", "Altex", "Media Galaxy", "PC Garage", "Flanco", "Auchan", "evoMAG", "Autovit.ro", "Amazon EU"]
     },
     "US": {
         "name": "United States",
         "flag": "🇺🇸",
         "currency": "USD",
         "locale": "en_US",
-        "stores": ["Amazon", "Best Buy", "Micro Center", "Walmart", "Target", "DoorDash", "Instacart"]
+        "stores": ["Micro Center", "Best Buy", "Walmart", "Amazon US", "AutoTrader US"]
     },
     "DE": {
         "name": "Germany",
@@ -77,7 +77,7 @@ COUNTRIES_REGISTRY: Dict[str, Dict[str, Any]] = {
         "flag": "🇦🇺",
         "currency": "AUD",
         "locale": "en_AU",
-        "stores": ["Amazon.com.au", "Scorptec", "PC Case Gear", "JB Hi-Fi", "DoorDash"]
+        "stores": ["Scorptec Computers", "JB Hi-Fi", "Amazon Australia", "CarSales Australia"]
     },
     "JP": {
         "name": "Japan",

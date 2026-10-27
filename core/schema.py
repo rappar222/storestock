@@ -13,6 +13,7 @@ class StockLevel(str, Enum):
 class ProductCategory(str, Enum):
     TECH_HARDWARE = "tech_hardware"
     GROCERIES = "groceries"
+    AUTOMOTIVE = "automotive"
     GENERAL = "general"
 
 class StoreResult(BaseModel):
@@ -38,6 +39,10 @@ class StoreResult(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     distance_km: Optional[float] = None
+    year: Optional[int] = None
+    mileage_km: Optional[int] = None
+    fuel_type: Optional[str] = None
+    transmission: Optional[str] = None
 
 class SearchResponse(BaseModel):
     query: str

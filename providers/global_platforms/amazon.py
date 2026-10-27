@@ -28,6 +28,10 @@ class AmazonProvider(BaseProvider):
             self.domain = "amazon.de"
             self.currency = "EUR"
             self.store_name = "Amazon (EU Direct)"
+        elif country_code == "AU":
+            self.domain = "amazon.com.au"
+            self.currency = "AUD"
+            self.store_name = "Amazon Australia"
         else:
             self.domain = "amazon.com"
             self.currency = "USD"

@@ -123,16 +123,296 @@ function scoreRelevance(query, title, price, inStock) {
   return score;
 }
 
-// Populate Country Selector
+// Major Cities Database per Country for Dynamic Location Examples
+const COUNTRY_CITIES = {
+  AU: {
+    country: "Australia",
+    defaultCity: "Sydney",
+    defaultLat: -33.8688,
+    defaultLon: 151.2093,
+    cities: [
+      { name: "Sydney", lat: -33.8688, lon: 151.2093 },
+      { name: "Melbourne", lat: -37.8136, lon: 144.9631 },
+      { name: "Brisbane", lat: -27.4698, lon: 153.0251 },
+      { name: "Perth", lat: -31.9505, lon: 115.8605 },
+      { name: "Adelaide", lat: -34.9285, lon: 138.6007 },
+      { name: "Canberra", lat: -35.2809, lon: 149.1300 },
+      { name: "Gold Coast", lat: -28.0167, lon: 153.4000 },
+      { name: "Hobart", lat: -42.8821, lon: 147.3272 }
+    ]
+  },
+  RO: {
+    country: "Romania",
+    defaultCity: "București",
+    defaultLat: 44.4323,
+    defaultLon: 26.1063,
+    cities: [
+      { name: "București", lat: 44.4323, lon: 26.1063 },
+      { name: "Cluj-Napoca", lat: 46.7712, lon: 23.6236 },
+      { name: "Timișoara", lat: 45.7489, lon: 21.2087 },
+      { name: "Iași", lat: 47.1585, lon: 27.6014 },
+      { name: "Brașov", lat: 45.6579, lon: 25.6012 },
+      { name: "Constanța", lat: 44.1792, lon: 28.6498 },
+      { name: "Craiova", lat: 44.3302, lon: 23.7949 },
+      { name: "Sibiu", lat: 45.7983, lon: 24.1256 },
+      { name: "Oradea", lat: 47.0465, lon: 21.9189 },
+      { name: "Galați", lat: 45.4353, lon: 28.0080 }
+    ]
+  },
+  US: {
+    country: "United States",
+    defaultCity: "New York",
+    defaultLat: 40.7128,
+    defaultLon: -74.0060,
+    cities: [
+      { name: "New York", lat: 40.7128, lon: -74.0060 },
+      { name: "Los Angeles", lat: 34.0522, lon: -118.2437 },
+      { name: "Chicago", lat: 41.8781, lon: -87.6298 },
+      { name: "Houston", lat: 29.7604, lon: -95.3698 },
+      { name: "San Francisco", lat: 37.7749, lon: -122.4194 },
+      { name: "Seattle", lat: 47.6062, lon: -122.3321 },
+      { name: "Austin", lat: 30.2672, lon: -97.7431 },
+      { name: "Miami", lat: 25.7617, lon: -80.1918 }
+    ]
+  },
+  GB: {
+    country: "United Kingdom",
+    defaultCity: "London",
+    defaultLat: 51.5074,
+    defaultLon: -0.1278,
+    cities: [
+      { name: "London", lat: 51.5074, lon: -0.1278 },
+      { name: "Manchester", lat: 53.4808, lon: -2.2426 },
+      { name: "Birmingham", lat: 52.4862, lon: -1.8904 },
+      { name: "Leeds", lat: 53.8008, lon: -1.5491 },
+      { name: "Glasgow", lat: 55.8642, lon: -4.2518 },
+      { name: "Edinburgh", lat: 55.9533, lon: -3.1883 }
+    ]
+  },
+  DE: {
+    country: "Germany",
+    defaultCity: "Berlin",
+    defaultLat: 52.5200,
+    defaultLon: 13.4050,
+    cities: [
+      { name: "Berlin", lat: 52.5200, lon: 13.4050 },
+      { name: "Munich", lat: 48.1351, lon: 11.5820 },
+      { name: "Frankfurt", lat: 50.1109, lon: 8.6821 },
+      { name: "Hamburg", lat: 53.5511, lon: 9.9937 },
+      { name: "Cologne", lat: 50.9375, lon: 6.9603 },
+      { name: "Stuttgart", lat: 48.7758, lon: 9.1829 }
+    ]
+  },
+  CA: {
+    country: "Canada",
+    defaultCity: "Toronto",
+    defaultLat: 43.6532,
+    defaultLon: -79.3832,
+    cities: [
+      { name: "Toronto", lat: 43.6532, lon: -79.3832 },
+      { name: "Vancouver", lat: 49.2827, lon: -123.1207 },
+      { name: "Montreal", lat: 45.5017, lon: -73.5673 },
+      { name: "Calgary", lat: 51.0447, lon: -114.0719 },
+      { name: "Ottawa", lat: 45.4215, lon: -75.6972 }
+    ]
+  },
+  FR: {
+    country: "France",
+    defaultCity: "Paris",
+    defaultLat: 48.8566,
+    defaultLon: 2.3522,
+    cities: [
+      { name: "Paris", lat: 48.8566, lon: 2.3522 },
+      { name: "Marseille", lat: 43.2965, lon: 5.3698 },
+      { name: "Lyon", lat: 45.7640, lon: 4.8357 },
+      { name: "Toulouse", lat: 43.6047, lon: 1.4442 },
+      { name: "Nice", lat: 43.7102, lon: 7.2620 }
+    ]
+  },
+  IT: {
+    country: "Italy",
+    defaultCity: "Rome",
+    defaultLat: 41.9028,
+    defaultLon: 12.4964,
+    cities: [
+      { name: "Rome", lat: 41.9028, lon: 12.4964 },
+      { name: "Milan", lat: 45.4642, lon: 9.1900 },
+      { name: "Naples", lat: 40.8518, lon: 14.2681 },
+      { name: "Turin", lat: 45.0703, lon: 7.6869 },
+      { name: "Florence", lat: 43.7696, lon: 11.2558 }
+    ]
+  },
+  ES: {
+    country: "Spain",
+    defaultCity: "Madrid",
+    defaultLat: 40.4168,
+    defaultLon: -3.7038,
+    cities: [
+      { name: "Madrid", lat: 40.4168, lon: -3.7038 },
+      { name: "Barcelona", lat: 41.3851, lon: 2.1734 },
+      { name: "Valencia", lat: 39.4699, lon: -0.3763 },
+      { name: "Seville", lat: 37.3891, lon: -5.9845 }
+    ]
+  },
+  NL: {
+    country: "Netherlands",
+    defaultCity: "Amsterdam",
+    defaultLat: 52.3676,
+    defaultLon: 4.9041,
+    cities: [
+      { name: "Amsterdam", lat: 52.3676, lon: 4.9041 },
+      { name: "Rotterdam", lat: 51.9244, lon: 4.4777 },
+      { name: "The Hague", lat: 52.0705, lon: 4.3007 },
+      { name: "Utrecht", lat: 52.0907, lon: 5.1214 }
+    ]
+  },
+  PL: {
+    country: "Poland",
+    defaultCity: "Warsaw",
+    defaultLat: 52.2297,
+    defaultLon: 21.0122,
+    cities: [
+      { name: "Warsaw", lat: 52.2297, lon: 21.0122 },
+      { name: "Kraków", lat: 50.0647, lon: 19.9450 },
+      { name: "Wrocław", lat: 51.1079, lon: 17.0385 },
+      { name: "Gdańsk", lat: 54.3520, lon: 18.6466 }
+    ]
+  }
+};
+
+function detectClientCountryFallback() {
+  try {
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").toLowerCase();
+    if (tz.includes("australia") || tz.includes("sydney") || tz.includes("melbourne") || tz.includes("perth") || tz.includes("brisbane") || tz.includes("adelaide")) return "AU";
+    if (tz.includes("bucharest") || tz.includes("chisinau")) return "RO";
+    if (tz.includes("london")) return "GB";
+    if (tz.includes("berlin") || tz.includes("frankfurt")) return "DE";
+    if (tz.includes("paris")) return "FR";
+    if (tz.includes("new_york") || tz.includes("chicago") || tz.includes("los_angeles") || tz.includes("denver")) return "US";
+    if (tz.includes("toronto") || tz.includes("vancouver") || tz.includes("montreal")) return "CA";
+    if (tz.includes("madrid")) return "ES";
+    if (tz.includes("rome")) return "IT";
+    if (tz.includes("amsterdam")) return "NL";
+    if (tz.includes("warsaw")) return "PL";
+  } catch (e) {}
+  return null;
+}
+
+function renderMajorCities(countryCode) {
+  const code = (countryCode || 'RO').toUpperCase();
+  const cData = COUNTRY_CITIES[code] || COUNTRY_CITIES['RO'];
+  const container = document.getElementById('majorCitiesContainer');
+  const title = document.getElementById('majorCitiesTitle');
+  const skipBtn = document.getElementById('skipLocationBtn');
+  const customInput = document.getElementById('customCityInput');
+
+  if (title) {
+    title.textContent = `Major Cities Examples (${cData.country}):`;
+  }
+
+  if (customInput && cData.cities && cData.cities.length >= 3) {
+    customInput.placeholder = `e.g. ${cData.cities[0].name}, ${cData.cities[1].name}, ${cData.cities[2].name}...`;
+  }
+
+  if (skipBtn) {
+    skipBtn.textContent = `Continue with default location (${cData.defaultCity}) →`;
+    skipBtn.onclick = () => {
+      if (locationModal) locationModal.classList.add('hidden');
+      const def = cData.cities.find(c => c.name === cData.defaultCity) || cData.cities[0];
+      setLocation(def.name, def.lat, def.lon);
+      showToast(`Using default location (${def.name}). You can change it anytime in the header.`);
+    };
+  }
+
+  if (container) {
+    container.innerHTML = '';
+    cData.cities.forEach(city => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'city-quick-btn px-2.5 py-1.5 rounded-lg bg-slate-800/90 hover:bg-emerald-500 hover:text-slate-950 border border-slate-700/80 text-slate-300 font-medium transition cursor-pointer';
+      btn.textContent = `📍 ${city.name}`;
+      btn.onclick = () => {
+        setLocation(city.name, city.lat, city.lon);
+        if (locationModal) locationModal.classList.add('hidden');
+      };
+      container.appendChild(btn);
+    });
+  }
+}
+
+let currentDetectedCountry = 'RO';
+let currentDetectedCityInfo = null;
+
+// Direct Client-Side IP Geolocation (routes directly through user's active browser VPN)
+async function detectVisitorLocation() {
+  const sources = [
+    async () => {
+      const res = await fetch('https://ipwho.is/', { signal: AbortSignal.timeout(3000) });
+      const data = await res.json();
+      if (data && data.success && data.country_code) {
+        return {
+          countryCode: data.country_code.toUpperCase(),
+          countryName: data.country || "Australia",
+          city: data.city || "Sydney",
+          lat: data.latitude || -33.8688,
+          lon: data.longitude || 151.2093
+        };
+      }
+      return null;
+    },
+    async () => {
+      const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
+      const data = await res.json();
+      if (data && data.country_code) {
+        return {
+          countryCode: data.country_code.toUpperCase(),
+          countryName: data.country_name,
+          city: data.city,
+          lat: data.latitude,
+          lon: data.longitude
+        };
+      }
+      return null;
+    },
+    async () => {
+      const res = await fetch('/api/detect-country', { signal: AbortSignal.timeout(2000) });
+      const data = await res.json();
+      if (data && data.country && data.source === 'cloudflare') {
+        return { countryCode: data.country.toUpperCase() };
+      }
+      return null;
+    }
+  ];
+
+  for (const s of sources) {
+    try {
+      const info = await s();
+      if (info && info.countryCode) return info;
+    } catch (e) {}
+  }
+  return null;
+}
+
+// Populate Country Selector & Auto-detect via VPN IP
 async function loadCountries() {
   try {
     const res = await fetch('/api/countries');
     const data = await res.json();
+    if (!countrySelect) return;
     countrySelect.innerHTML = '';
     
+    // Auto-detect visitor's country directly through their VPN tunnel
+    currentDetectedCityInfo = await detectVisitorLocation();
+    if (currentDetectedCityInfo && currentDetectedCityInfo.countryCode && data[currentDetectedCityInfo.countryCode]) {
+      currentDetectedCountry = currentDetectedCityInfo.countryCode;
+    } else {
+      const tzCountry = detectClientCountryFallback();
+      if (tzCountry && data[tzCountry]) currentDetectedCountry = tzCountry;
+    }
+
     const sorted = Object.entries(data).sort((a, b) => {
-      if (a[0] === 'RO') return -1;
-      if (b[0] === 'RO') return 1;
+      if (a[0] === currentDetectedCountry) return -1;
+      if (b[0] === currentDetectedCountry) return 1;
       return a[1].name.localeCompare(b[1].name);
     });
 
@@ -140,9 +420,20 @@ async function loadCountries() {
       const opt = document.createElement('option');
       opt.value = code;
       opt.textContent = `${info.flag} ${info.name} (${info.currency})`;
-      if (code === 'RO') opt.selected = true;
+      if (code === currentDetectedCountry) opt.selected = true;
       countrySelect.appendChild(opt);
     }
+
+    // Render city examples for the detected country!
+    renderMajorCities(currentDetectedCountry);
+
+    // Update city examples & store search whenever country selection changes
+    countrySelect.addEventListener('change', () => {
+      const newCountry = countrySelect.value;
+      renderMajorCities(newCountry);
+      const cData = COUNTRY_CITIES[newCountry] || COUNTRY_CITIES['RO'];
+      setLocation(cData.defaultCity, cData.defaultLat, cData.defaultLon);
+    });
   } catch (err) {
     console.error("Failed to load countries:", err);
   }
@@ -154,84 +445,20 @@ const currentLocationLabel = document.getElementById('currentLocationLabel');
 const locationModal = document.getElementById('locationModal');
 const closeLocationModalBtn = document.getElementById('closeLocationModalBtn');
 const autoDetectLocationBtn = document.getElementById('autoDetectLocationBtn');
+const locationModalNotice = document.getElementById('locationModalNotice');
+const locationModalNoticeText = document.getElementById('locationModalNoticeText');
 const customCityForm = document.getElementById('customCityForm');
 const customCityInput = document.getElementById('customCityInput');
-
-// Location Prompt Banner Elements
-const locationPromptBanner = document.getElementById('locationPromptBanner');
-const allowLocationBtn = document.getElementById('allowLocationBtn');
-const pickCityPromptBtn = document.getElementById('pickCityPromptBtn');
-const dismissLocationPromptBtn = document.getElementById('dismissLocationPromptBtn');
+const skipLocationBtn = document.getElementById('skipLocationBtn');
 
 function resetLocationButtons() {
   if (autoDetectLocationBtn) {
     autoDetectLocationBtn.innerHTML = `
-      <i data-lucide="crosshair" class="w-4 h-4 text-emerald-400"></i>
-      <span>Request Approximate Browser Location</span>
-    `;
-  }
-  if (allowLocationBtn) {
-    allowLocationBtn.innerHTML = `
-      <i data-lucide="crosshair" class="w-3.5 h-3.5"></i>
-      <span>Share Approximate Location</span>
+      <i data-lucide="crosshair" class="w-4 h-4 font-bold"></i>
+      <span>Allow Approximate Location Access</span>
     `;
   }
   safeRenderIcons();
-}
-
-function dismissLocationBanner() {
-  if (locationPromptBanner) locationPromptBanner.classList.add('hidden');
-  localStorage.setItem('storestock_loc_prompt_dismissed', 'true');
-}
-
-function requestBrowserLocation(isAuto = false) {
-  if (!navigator.geolocation) {
-    if (!isAuto) showToast("Geolocation is not supported by your browser");
-    return;
-  }
-
-  if (autoDetectLocationBtn) {
-    autoDetectLocationBtn.innerHTML = `
-      <span class="inline-block w-3 h-3 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin mr-1"></span>
-      <span>Detecting approximate area...</span>
-    `;
-  }
-  if (allowLocationBtn) {
-    allowLocationBtn.innerHTML = `
-      <span class="inline-block w-3 h-3 rounded-full border-2 border-slate-950 border-t-transparent animate-spin mr-1"></span>
-      <span>Requesting...</span>
-    `;
-  }
-
-  // Request approximate location without GPS lock (fast, privacy friendly)
-  navigator.geolocation.getCurrentPosition(
-    async (pos) => {
-      resetLocationButtons();
-      const lat = pos.coords.latitude;
-      const lon = pos.coords.longitude;
-      
-      let locName = "Approximate Location";
-      try {
-        const revRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-        const revData = await revRes.json();
-        locName = revData.address.city || revData.address.town || revData.address.municipality || revData.address.county || revData.address.state || "Your Area";
-      } catch (e) {
-        locName = "Your Area";
-      }
-
-      setLocation(locName, lat, lon);
-      dismissLocationBanner();
-    },
-    (err) => {
-      resetLocationButtons();
-      console.warn("Location permission notice:", err.message);
-      if (!isAuto) {
-        showToast("Location access denied or unavailable. Please pick a city below.");
-        if (locationModal) locationModal.classList.remove('hidden');
-      }
-    },
-    { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
-  );
 }
 
 function setupGeolocation() {
@@ -239,62 +466,125 @@ function setupGeolocation() {
   const savedName = localStorage.getItem('storestock_loc_name');
   const savedLat = localStorage.getItem('storestock_loc_lat');
   const savedLon = localStorage.getItem('storestock_loc_lon');
+  const savedCountry = localStorage.getItem('storestock_loc_country');
   const isExplicitlySet = localStorage.getItem('storestock_loc_set');
 
-  if (savedName && savedLat && savedLon) {
+  // Check if VPN country has changed from previously saved country
+  const countryHasChanged = savedCountry && savedCountry !== currentDetectedCountry;
+
+  if (currentDetectedCityInfo && (!isExplicitlySet || countryHasChanged)) {
+    // Automatically set location to detected VPN city (e.g. Sydney, Melbourne)
+    const cData = COUNTRY_CITIES[currentDetectedCountry] || COUNTRY_CITIES['RO'];
+    const cityName = currentDetectedCityInfo.city || cData.defaultCity;
+    const lat = currentDetectedCityInfo.lat || cData.defaultLat;
+    const lon = currentDetectedCityInfo.lon || cData.defaultLon;
+    setLocation(cityName, lat, lon);
+  } else if (savedName && savedLat && savedLon && !countryHasChanged) {
     userCoords = { lat: parseFloat(savedLat), lon: parseFloat(savedLon) };
     if (currentLocationLabel) currentLocationLabel.textContent = savedName;
   } else {
-    // Default coordinates (București) until user provides location
-    userCoords = { lat: 44.4323, lon: 26.1063 };
-    if (currentLocationLabel) currentLocationLabel.textContent = "București";
+    // Dynamic default coordinates based on detected country
+    const cData = COUNTRY_CITIES[currentDetectedCountry] || COUNTRY_CITIES['RO'];
+    userCoords = { lat: cData.defaultLat, lon: cData.defaultLon };
+    if (currentLocationLabel) currentLocationLabel.textContent = cData.defaultCity;
   }
 
-  // If user hasn't explicitly set location yet, actively ask for approximate location!
-  if (!isExplicitlySet) {
-    if (locationPromptBanner) locationPromptBanner.classList.remove('hidden');
-    // Prompt the browser natively for approximate location
-    requestBrowserLocation(true);
+  // Render major cities for current country
+  renderMajorCities(currentDetectedCountry);
+
+  // If user hasn't explicitly configured location or country changed, actively open the modal!
+  if (!isExplicitlySet || countryHasChanged) {
+    if (locationModal) locationModal.classList.remove('hidden');
   }
 
-  // Banner action buttons
-  if (allowLocationBtn) {
-    allowLocationBtn.onclick = () => requestBrowserLocation(false);
-  }
-  if (pickCityPromptBtn) {
-    pickCityPromptBtn.onclick = () => {
+  // Open modal from header button
+  if (openLocationModalBtn) {
+    openLocationModalBtn.onclick = () => {
+      const activeCode = countrySelect ? countrySelect.value : currentDetectedCountry;
+      renderMajorCities(activeCode);
+      if (locationModalNotice) locationModalNotice.classList.add('hidden');
       if (locationModal) locationModal.classList.remove('hidden');
     };
   }
-  if (dismissLocationPromptBtn) {
-    dismissLocationPromptBtn.onclick = () => dismissLocationBanner();
-  }
 
-  // Open modal
-  if (openLocationModalBtn) {
-    openLocationModalBtn.onclick = () => locationModal.classList.remove('hidden');
-  }
-
+  // Close modal button (X)
   if (closeLocationModalBtn) {
-    closeLocationModalBtn.onclick = () => locationModal.classList.add('hidden');
-  }
-
-  // Quick select city buttons
-  document.querySelectorAll('.city-quick-btn').forEach(btn => {
-    btn.onclick = () => {
-      const name = btn.getAttribute('data-name');
-      const lat = parseFloat(btn.getAttribute('data-lat'));
-      const lon = parseFloat(btn.getAttribute('data-lon'));
-      setLocation(name, lat, lon);
+    closeLocationModalBtn.onclick = () => {
+      if (locationModal) locationModal.classList.add('hidden');
     };
-  });
+  }
 
   // Request Approximate Browser Location button inside modal
   if (autoDetectLocationBtn) {
-    autoDetectLocationBtn.onclick = () => requestBrowserLocation(false);
+    autoDetectLocationBtn.onclick = () => {
+      autoDetectLocationBtn.innerHTML = `
+        <span class="inline-block w-4 h-4 rounded-full border-2 border-slate-950 border-t-transparent animate-spin mr-2"></span>
+        <span>Detecting approximate city...</span>
+      `;
+
+      // Function to apply IP-detected location if browser geolocation fails or is denied
+      const fallbackToIpLocation = async () => {
+        const ipLoc = await detectVisitorLocation();
+        if (ipLoc && ipLoc.city) {
+          setLocation(ipLoc.city, ipLoc.lat, ipLoc.lon);
+          if (countrySelect && ipLoc.countryCode) {
+            countrySelect.value = ipLoc.countryCode;
+            renderMajorCities(ipLoc.countryCode);
+          }
+          if (locationModal) locationModal.classList.add('hidden');
+          resetLocationButtons();
+          showToast(`📍 Detected area: ${ipLoc.city} (${ipLoc.countryName || ipLoc.countryCode}).`);
+          return true;
+        }
+        return false;
+      };
+
+      if (!navigator.geolocation) {
+        fallbackToIpLocation().then(ok => {
+          if (!ok) showToast("Geolocation is not supported by your browser");
+        });
+        return;
+      }
+
+      // Request approximate location without GPS lock (fast, privacy friendly)
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          resetLocationButtons();
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          
+          let locName = "Approximate Location";
+          try {
+            const revRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+            const revData = await revRes.json();
+            locName = revData.address.city || revData.address.town || revData.address.municipality || revData.address.county || revData.address.state || "Your Area";
+          } catch (e) {
+            locName = "Your Area";
+          }
+
+          setLocation(locName, lat, lon);
+          if (locationModal) locationModal.classList.add('hidden');
+        },
+        async (err) => {
+          console.warn("Browser GPS permission error, falling back to IP:", err.message);
+          const ok = await fallbackToIpLocation();
+          if (!ok) {
+            resetLocationButtons();
+            if (locationModalNotice) {
+              locationModalNotice.classList.remove('hidden');
+              if (locationModalNoticeText) {
+                locationModalNoticeText.textContent = "Location permission was not granted. Please enter your city below or select from the examples:";
+              }
+            }
+            if (customCityInput) customCityInput.focus();
+          }
+        },
+        { enableHighAccuracy: false, timeout: 6000, maximumAge: 300000 }
+      );
+    };
   }
 
-  // Custom city search
+  // Custom city search form
   if (customCityForm) {
     customCityForm.onsubmit = async (e) => {
       e.preventDefault();
@@ -302,15 +592,17 @@ function setupGeolocation() {
       if (!val) return;
 
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&limit=1`);
+        const countryFilter = countrySelect ? `&countrycodes=${countrySelect.value.toLowerCase()}` : '';
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}${countryFilter}&limit=1`);
         const data = await res.json();
         if (data && data.length > 0) {
           const lat = parseFloat(data[0].lat);
           const lon = parseFloat(data[0].lon);
           const displayName = data[0].display_name.split(',')[0];
           setLocation(displayName, lat, lon);
+          if (locationModal) locationModal.classList.add('hidden');
         } else {
-          showToast(`Could not find location "${val}". Please try another name.`);
+          showToast(`Could not find location "${val}". Please try another name or pick from the examples.`);
         }
       } catch (e) {
         showToast("Error searching city. Please pick from the list below.");
@@ -322,20 +614,21 @@ function setupGeolocation() {
 function setLocation(name, lat, lon) {
   userCoords = { lat, lon };
   if (currentLocationLabel) currentLocationLabel.textContent = name;
+  const activeCountry = countrySelect ? countrySelect.value : currentDetectedCountry;
   localStorage.setItem('storestock_loc_name', name);
   localStorage.setItem('storestock_loc_lat', lat);
   localStorage.setItem('storestock_loc_lon', lon);
+  localStorage.setItem('storestock_loc_country', activeCountry);
   localStorage.setItem('storestock_loc_set', 'true');
 
   if (locationModal) locationModal.classList.add('hidden');
-  dismissLocationBanner();
-  showToast(`📍 Location set to ${name}. Distances recalculated.`);
+  showToast(`📍 Location set to ${name} (${activeCountry}). Distances recalculated.`);
 
   if (map) {
     map.setView([lat, lon], 12);
   }
 
-  // Re-search to recompute distances with new coords
+  // Re-search to recompute distances with new coords and country!
   const query = searchInput ? (searchInput.value || '') : '';
   if (query.trim()) {
     executeSearch(query.trim());
@@ -395,6 +688,7 @@ function executeSearch(query) {
   storesProgress.innerHTML = '';
   emptyState.classList.add('hidden');
   statsBar.classList.remove('hidden');
+  safeRenderIcons();
   loadingIndicator.classList.remove('hidden');
 
   inStockStat.textContent = 'Checking stock...';
@@ -656,6 +950,23 @@ function renderResults() {
       `;
     }
 
+    // Vehicle specifications pill (for cars / automotive)
+    let carSpecsBadge = '';
+    if (item.category === 'automotive' || item.year || item.mileage_km) {
+      const specs = [];
+      if (item.year) specs.push(`📅 ${item.year}`);
+      if (item.mileage_km) specs.push(`🛣️ ${item.mileage_km.toLocaleString()} km`);
+      if (item.fuel_type) specs.push(`⛽ ${item.fuel_type}`);
+      if (item.transmission) specs.push(`⚙️ ${item.transmission}`);
+      if (specs.length > 0) {
+        carSpecsBadge = `
+          <div class="flex flex-wrap gap-1 text-[10px] pt-1.5">
+            ${specs.map(s => `<span class="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 font-medium">${s}</span>`).join('')}
+          </div>
+        `;
+      }
+    }
+
     // Alert CTA if out of stock
     let alertActionBtn = '';
     if (!item.in_stock) {
@@ -692,6 +1003,7 @@ function renderResults() {
           ${item.title}
         </h3>
 
+        ${carSpecsBadge}
         ${branchBadge}
         ${alertActionBtn}
       </div>
@@ -1024,11 +1336,11 @@ filterNearbyBtn.addEventListener('click', () => {
 
 function updateFilterButtons() {
   [filterAllBtn, filterInStockBtn, filterNearbyBtn].forEach(b => {
-    b.className = "filter-btn px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition";
+    b.className = "filter-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 font-medium transition text-xs";
   });
-  if (activeFilter === 'all') filterAllBtn.className = "filter-btn px-3 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold transition";
-  if (activeFilter === 'in_stock') filterInStockBtn.className = "filter-btn px-3 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold transition";
-  if (activeFilter === 'nearby') filterNearbyBtn.className = "filter-btn px-3 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold transition";
+  if (activeFilter === 'all') filterAllBtn.className = "filter-btn active px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold transition shadow-sm text-xs";
+  if (activeFilter === 'in_stock') filterInStockBtn.className = "filter-btn active px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold transition shadow-sm text-xs";
+  if (activeFilter === 'nearby') filterNearbyBtn.className = "filter-btn active px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 font-bold transition shadow-sm text-xs";
 }
 
 sortSelect.addEventListener('change', () => {
@@ -1037,9 +1349,9 @@ sortSelect.addEventListener('change', () => {
 });
 
 // Robust Initialization
-function initApp() {
+async function initApp() {
   try {
-    loadCountries();
+    await loadCountries();
     setupGeolocation();
     loadAlerts();
     safeRenderIcons();

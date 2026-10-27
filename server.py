@@ -2,7 +2,7 @@ import os
 import json
 import asyncio
 from typing import Optional
-from fastapi import FastAPI, Query, HTTPException, Body
+from fastapi import FastAPI, Query, HTTPException, Body, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -36,6 +36,14 @@ async def serve_index():
 @app.get("/api/countries")
 async def get_countries():
     return COUNTRIES_REGISTRY
+
+@app.get("/api/detect-country")
+async def detect_country_endpoint(request: Request):
+    # Check Cloudflare edge header CF-IPCountry
+    cf_country = request.headers.get("cf-ipcountry")
+    if cf_country and cf_country.upper() in COUNTRIES_REGISTRY:
+        return {"country": cf_country.upper(), "source": "cloudflare"}
+    return {"country": "RO", "source": "default"}
 
 @app.get("/api/search", response_model=SearchResponse)
 async def search_endpoint(

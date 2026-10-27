@@ -69,6 +69,20 @@ HARDWARE_SYNONYMS: Dict[str, Dict] = {
 def analyze_user_intent(query: str) -> Dict:
     q_clean = query.lower().strip()
     
+    # Check if vehicle query
+    from providers.cars.auto_market import AutoMarketProvider
+    if AutoMarketProvider.is_car_query(query):
+        return {
+            "original_query": query,
+            "detected_intent": "VEHICLE",
+            "canonical_name": f"{query.strip().title()} (Automotive)",
+            "description": "Searching vehicle dealerships, auto lots & certified pre-owned lots.",
+            "is_component": False,
+            "user_wants_system": False,
+            "user_wants_accessory": False,
+            "synonyms": [query]
+        }
+
     matched_entry = None
     for key, data in HARDWARE_SYNONYMS.items():
         if re.search(r"\b" + re.escape(key) + r"\b", q_clean):
