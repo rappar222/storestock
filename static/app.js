@@ -676,9 +676,36 @@ function renderAiIntent(intent) {
   if (window.lucide) safeRenderIcons();
 }
 
+function renderInitialWelcomeState() {
+  if (!resultsGrid) return;
+  resultsGrid.innerHTML = `
+    <div class="col-span-full flex flex-col items-center justify-center py-24 px-4 text-center space-y-4">
+      <div class="h-16 w-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-emerald-400 shadow-xl shadow-emerald-500/10">
+        <i data-lucide="search" class="w-8 h-8"></i>
+      </div>
+      <div class="space-y-1.5">
+        <h3 class="text-lg font-bold text-slate-200">Search Across Stores Worldwide</h3>
+        <p class="text-xs text-slate-400 max-w-md mx-auto">
+          Type any product name, hardware, groceries, or vehicle above to check live stock, physical shelf availability, and prices in real-time.
+        </p>
+      </div>
+    </div>
+  `;
+  safeRenderIcons();
+}
+
 // Live Streaming Search via SSE
 function executeSearch(query) {
-  if (!query || !query.trim()) return;
+  if (!query || !query.trim()) {
+    renderInitialWelcomeState();
+    if (statsBar) statsBar.classList.add('hidden');
+    const pCont = document.getElementById('storesProgressContainer');
+    if (pCont) pCont.classList.add('hidden');
+    return;
+  }
+
+  const pCont = document.getElementById('storesProgressContainer');
+  if (pCont) pCont.classList.remove('hidden');
 
   const country = countrySelect.value || 'RO';
   currentResults = [];
@@ -925,12 +952,15 @@ function renderResults() {
 
     let badgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
     let statusIcon = "check-circle";
+    let cleanStockText = "In Stock";
     if (!item.in_stock) {
       badgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/20";
       statusIcon = "x-circle";
+      cleanStockText = "Out of Stock";
     } else if (item.stock_level === "LOW_STOCK") {
       badgeClass = "bg-amber-500/10 text-amber-400 border border-amber-500/20";
       statusIcon = "alert-triangle";
+      cleanStockText = "Low Stock";
     }
 
     let formattedPrice = `${item.price.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${item.currency}`;
@@ -985,13 +1015,13 @@ function renderResults() {
 
     card.innerHTML = `
       <div class="space-y-2.5">
-        <div class="flex items-center justify-between gap-1.5">
-          <span class="px-2 py-0.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700/80">
+        <div class="flex items-center justify-between gap-2">
+          <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700/80 truncate max-w-[130px]" title="${item.store_name}">
             ${item.store_name}
           </span>
-          <span class="store-badge ${badgeClass}">
-            <i data-lucide="${statusIcon}" class="w-3 h-3"></i>
-            <span>${item.stock_badge_text}</span>
+          <span class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wide whitespace-nowrap shrink-0 ${badgeClass}" title="${item.stock_badge_text || cleanStockText}">
+            <i data-lucide="${statusIcon}" class="w-3.5 h-3.5 shrink-0"></i>
+            <span>${cleanStockText}</span>
           </span>
         </div>
 
@@ -1305,16 +1335,6 @@ searchForm.addEventListener('submit', (e) => {
   executeSearch(searchInput.value);
 });
 
-// Quick suggestion tags
-document.querySelectorAll('.quick-tag').forEach(tag => {
-  tag.addEventListener('click', () => {
-    const q = tag.getAttribute('data-query');
-    searchInput.value = q;
-    if (currentView === 'alerts') switchView('grid');
-    executeSearch(q);
-  });
-});
-
 // Filters
 filterAllBtn.addEventListener('click', () => {
   activeFilter = 'all';
@@ -1354,9 +1374,11 @@ async function initApp() {
     await loadCountries();
     setupGeolocation();
     loadAlerts();
+    if (searchInput) {
+      searchInput.value = '';
+    }
+    renderInitialWelcomeState();
     safeRenderIcons();
-    const query = searchInput ? (searchInput.value || 'rtx') : 'rtx';
-    executeSearch(query);
   } catch (err) {
     console.error("Initialization error:", err);
   }

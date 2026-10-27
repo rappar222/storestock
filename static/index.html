@@ -61,10 +61,12 @@
       display: inline-flex;
       align-items: center;
       gap: 0.35rem;
-      padding: 0.2rem 0.6rem;
+      padding: 0.25rem 0.65rem;
       border-radius: 9999px;
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     #mapContainer {
       height: 580px;
@@ -155,10 +157,10 @@
         <input 
           type="text" 
           id="searchInput" 
-          placeholder="Search products or cars (e.g. RTX 5070, BMW M3, Tesla Model 3, NVIDIA A6000)..." 
+          placeholder="Search products, hardware, groceries, or cars..." 
           class="w-full bg-transparent text-base sm:text-lg text-slate-100 placeholder-slate-500 outline-none px-2 py-2"
           autocomplete="off"
-          value="rtx 5070"
+          value=""
         />
         <button 
           type="submit" 
@@ -170,16 +172,7 @@
         </button>
       </form>
 
-      <!-- Quick Search Suggestions Tags -->
-      <div class="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-xs">
-        <span class="text-slate-500 font-medium">Quick searches:</span>
-        <button class="quick-tag px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-query="rtx 5070">RTX 5070</button>
-        <button class="quick-tag px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-query="nvidia a6000">NVIDIA A6000</button>
-        <button class="quick-tag px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-query="BMW M3">🚗 BMW M3</button>
-        <button class="quick-tag px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-query="Tesla Model 3">🚗 Tesla Model 3</button>
-        <button class="quick-tag px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-query="Porsche 911">🚗 Porsche 911</button>
-        <button class="quick-tag px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition" data-query="lapte 1.5%">Lapte 1.5%</button>
-      </div>
+
     </div>
 
     <!-- AI Intent & Semantic Disambiguation Banner -->
@@ -236,7 +229,7 @@
     </div>
 
     <!-- Stores Progress & Filter Pills -->
-    <div class="space-y-1.5">
+    <div id="storesProgressContainer" class="hidden space-y-1.5">
       <div class="flex items-center justify-between text-[11px] text-slate-400 px-0.5">
         <span class="flex items-center space-x-1 text-slate-400">
           <i data-lucide="mouse-pointer-click" class="w-3.5 h-3.5 text-emerald-400"></i>
@@ -475,6 +468,6 @@
       }
     });
   </script>
-  <script src="/static/app.js?v=2.1"></script>
+  <script src="/static/app.js?v=2.3"></script>
 </body>
 </html>
