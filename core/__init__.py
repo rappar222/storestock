@@ -1,0 +1,1 @@
+# storestock core package
