@@ -5,7 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: storestock
     restart: unless-stopped
     ports:
       - "3005:3000"
