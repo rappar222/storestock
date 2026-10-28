@@ -380,7 +380,10 @@ async fn stream_endpoint(
                     (header::CONTENT_TYPE, "text/event-stream"),
                     (header::CACHE_CONTROL, "no-cache"),
                     (header::CONNECTION, "keep-alive"),
-                    ("X-Engine-Gateway", "Rust-Axum-Live-Scraper-Proxy"),
+                    (
+                        header::HeaderName::from_static("x-engine-gateway"),
+                        "Rust-Axum-Live-Scraper-Proxy",
+                    ),
                 ],
                 body,
             )
@@ -479,7 +482,10 @@ async fn stream_endpoint(
             (header::CONTENT_TYPE, "text/event-stream"),
             (header::CACHE_CONTROL, "no-cache"),
             (header::CONNECTION, "keep-alive"),
-            ("X-Engine-Gateway", "Rust-Axum-Synthetic-Fallback"),
+            (
+                header::HeaderName::from_static("x-engine-gateway"),
+                "Rust-Axum-Synthetic-Fallback",
+            ),
         ],
         body,
     )
