@@ -8,7 +8,7 @@ import base64
 from email.message import EmailMessage
 from typing import Optional
 from fastapi import FastAPI, Query, HTTPException, Body, Request, BackgroundTasks
-from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from core.engine import SearchEngine
@@ -37,6 +37,35 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 async def serve_index():
     with open(os.path.join(static_dir, "index.html"), "r", encoding="utf-8") as f:
         return f.read()
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon_endpoint():
+    logo_path = os.path.join(static_dir, "logo.svg")
+    return FileResponse(logo_path, media_type="image/svg+xml")
+
+@app.get("/robots.txt", response_class=PlainTextResponse)
+async def robots_txt():
+    return (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /api/\n"
+        "Sitemap: https://storestock.polychroms.dev/sitemap.xml\n"
+    )
+
+@app.get("/sitemap.xml", response_class=Response)
+async def sitemap_xml():
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        '  <url>\n'
+        '    <loc>https://storestock.polychroms.dev/</loc>\n'
+        '    <lastmod>2026-10-28</lastmod>\n'
+        '    <changefreq>daily</changefreq>\n'
+        '    <priority>1.0</priority>\n'
+        '  </url>\n'
+        '</urlset>'
+    )
+    return Response(content=xml, media_type="application/xml")
 
 @app.get("/api/countries")
 async def get_countries():

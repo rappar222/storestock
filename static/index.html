@@ -3,7 +3,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StoreStock — Real-Time Multi-Store Inventory & Store Map Engine</title>
+  <title>StoreStock — Store Stock Checker &amp; Live In-Store Shelf Inventory</title>
+  
+  <!-- SEO & Search Engine Indexing Meta Tags -->
+  <meta name="description" content="StoreStock is a real-time store stock checker and multi-store inventory engine. Check live in-store shelf stock and online availability across 24+ countries and 35+ retail chains.">
+  <meta name="keywords" content="storestock, store stock, store stock checker, stock checker, check store inventory, in stock checker, live inventory tracker, gpu stock checker, physical shelf stock">
+  <meta name="author" content="StoreStock">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <link rel="canonical" href="https://storestock.polychroms.dev/">
+
+  <!-- Open Graph / Facebook / Discord Link Embeds -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://storestock.polychroms.dev/">
+  <meta property="og:title" content="StoreStock — Store Stock Checker &amp; Real-Time Inventory">
+  <meta property="og:description" content="Find products, hardware, RTX GPUs, and cars in stores with live shelf stock verification across 24+ countries.">
+  <meta property="og:site_name" content="StoreStock">
+
+  <!-- Twitter / X Card Meta -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="StoreStock — Store Stock Checker">
+  <meta name="twitter:description" content="Real-time multi-store inventory engine and physical shelf stock tracker.">
+
+  <!-- Schema.org Structured Data for Google Rich Snippets -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "StoreStock",
+    "alternateName": ["Store Stock", "Store Stock Checker", "StoreStock Multi-Engine"],
+    "url": "https://storestock.polychroms.dev/",
+    "applicationCategory": "ShoppingApplication",
+    "operatingSystem": "All",
+    "description": "Real-time store stock checker and multi-store inventory aggregator across physical branches and online retailers.",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://storestock.polychroms.dev/?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+
+  <!-- Browser Tab Favicon & App Icons -->
+  <link rel="icon" type="image/svg+xml" href="/static/logo.svg" />
+  <link rel="alternate icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" href="/static/logo.svg" />
   <!-- Tailwind CSS & Lucide Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
@@ -39,6 +82,11 @@
       }
     }
   </script>
+
+  <!-- Browser Tab Favicon & App Icons -->
+  <link rel="icon" type="image/svg+xml" href="/static/logo.svg" />
+  <link rel="alternate icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" href="/static/logo.svg" />
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     body {
@@ -92,9 +140,9 @@
   <!-- Top Navigation -->
   <header class="border-b border-slate-800 bg-[#0f172a]/80 backdrop-blur-md sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-          <i data-lucide="layers" class="w-6 h-6 text-black font-bold"></i>
+      <div class="flex items-center space-x-3 group cursor-pointer" onclick="window.location.href='/'">
+        <div class="h-10 w-10 rounded-xl bg-slate-900 border border-slate-700/80 p-1 flex items-center justify-center shadow-lg shadow-cyan-500/15 group-hover:border-cyan-500/50 group-hover:scale-105 transition-all">
+          <img src="/static/logo.svg" alt="StoreStock Logo" class="w-full h-full object-contain" />
         </div>
         <div>
           <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">storestock</span>
@@ -714,6 +762,6 @@
       }
     });
   </script>
-  <script src="/static/app.js?v=4.4"></script>
+  <script src="/static/app.js?v=4.6"></script>
 </body>
 </html>
