@@ -39,10 +39,11 @@ async def get_countries():
 
 @app.get("/api/detect-country")
 async def detect_country_endpoint(request: Request):
-    # Check Cloudflare edge header CF-IPCountry
-    cf_country = request.headers.get("cf-ipcountry")
-    if cf_country and cf_country.upper() in COUNTRIES_REGISTRY:
-        return {"country": cf_country.upper(), "source": "cloudflare"}
+    # Check Cloudflare edge header CF-IPCountry (case-insensitive) or other common proxy headers
+    for h in ["cf-ipcountry", "x-country-code", "x-geo-country", "geoip-country"]:
+        val = request.headers.get(h)
+        if val and val.upper() in COUNTRIES_REGISTRY:
+            return {"country": val.upper(), "source": "cloudflare"}
     return {"country": "RO", "source": "default"}
 
 @app.get("/api/search", response_model=SearchResponse)

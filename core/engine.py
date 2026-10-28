@@ -26,6 +26,7 @@ from providers.us.walmart import WalmartProvider
 from providers.au.scorptec import ScorptecProvider
 from providers.au.jbhifi import JBHiFiProvider
 from providers.cars.auto_market import AutoMarketProvider
+from providers.ro.proleasing import ProleasingProvider
 
 class SearchEngine:
     def __init__(self):
@@ -45,7 +46,8 @@ class SearchEngine:
                 AliExpressProvider("RO"),
                 TemuProvider("RO"),
                 AlibabaProvider("RO"),
-                AutoMarketProvider("RO")
+                AutoMarketProvider("RO"),
+                ProleasingProvider()
             ],
             "US": [
                 MicroCenterProvider(),

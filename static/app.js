@@ -123,7 +123,7 @@ function scoreRelevance(query, title, price, inStock) {
   return score;
 }
 
-// Major Cities Database per Country for Dynamic Location Examples
+// Major Cities Database per Country for Dynamic Location Examples (All 49 Supported Countries)
 const COUNTRY_CITIES = {
   AU: {
     country: "Australia",
@@ -156,6 +156,7 @@ const COUNTRY_CITIES = {
       { name: "Craiova", lat: 44.3302, lon: 23.7949 },
       { name: "Sibiu", lat: 45.7983, lon: 24.1256 },
       { name: "Oradea", lat: 47.0465, lon: 21.9189 },
+      { name: "Ploiești", lat: 44.9402, lon: 26.0227 },
       { name: "Galați", lat: 45.4353, lon: 28.0080 }
     ]
   },
@@ -172,7 +173,9 @@ const COUNTRY_CITIES = {
       { name: "San Francisco", lat: 37.7749, lon: -122.4194 },
       { name: "Seattle", lat: 47.6062, lon: -122.3321 },
       { name: "Austin", lat: 30.2672, lon: -97.7431 },
-      { name: "Miami", lat: 25.7617, lon: -80.1918 }
+      { name: "Miami", lat: 25.7617, lon: -80.1918 },
+      { name: "Boston", lat: 42.3601, lon: -71.0589 },
+      { name: "Denver", lat: 39.7392, lon: -104.9903 }
     ]
   },
   GB: {
@@ -186,7 +189,9 @@ const COUNTRY_CITIES = {
       { name: "Birmingham", lat: 52.4862, lon: -1.8904 },
       { name: "Leeds", lat: 53.8008, lon: -1.5491 },
       { name: "Glasgow", lat: 55.8642, lon: -4.2518 },
-      { name: "Edinburgh", lat: 55.9533, lon: -3.1883 }
+      { name: "Edinburgh", lat: 55.9533, lon: -3.1883 },
+      { name: "Liverpool", lat: 53.4084, lon: -2.9916 },
+      { name: "Bristol", lat: 51.4545, lon: -2.5879 }
     ]
   },
   DE: {
@@ -200,7 +205,9 @@ const COUNTRY_CITIES = {
       { name: "Frankfurt", lat: 50.1109, lon: 8.6821 },
       { name: "Hamburg", lat: 53.5511, lon: 9.9937 },
       { name: "Cologne", lat: 50.9375, lon: 6.9603 },
-      { name: "Stuttgart", lat: 48.7758, lon: 9.1829 }
+      { name: "Stuttgart", lat: 48.7758, lon: 9.1829 },
+      { name: "Düsseldorf", lat: 51.2277, lon: 6.7735 },
+      { name: "Leipzig", lat: 51.3397, lon: 12.3731 }
     ]
   },
   CA: {
@@ -213,7 +220,9 @@ const COUNTRY_CITIES = {
       { name: "Vancouver", lat: 49.2827, lon: -123.1207 },
       { name: "Montreal", lat: 45.5017, lon: -73.5673 },
       { name: "Calgary", lat: 51.0447, lon: -114.0719 },
-      { name: "Ottawa", lat: 45.4215, lon: -75.6972 }
+      { name: "Ottawa", lat: 45.4215, lon: -75.6972 },
+      { name: "Edmonton", lat: 53.5461, lon: -113.4938 },
+      { name: "Quebec City", lat: 46.8139, lon: -71.2080 }
     ]
   },
   FR: {
@@ -226,7 +235,10 @@ const COUNTRY_CITIES = {
       { name: "Marseille", lat: 43.2965, lon: 5.3698 },
       { name: "Lyon", lat: 45.7640, lon: 4.8357 },
       { name: "Toulouse", lat: 43.6047, lon: 1.4442 },
-      { name: "Nice", lat: 43.7102, lon: 7.2620 }
+      { name: "Nice", lat: 43.7102, lon: 7.2620 },
+      { name: "Nantes", lat: 47.2184, lon: -1.5536 },
+      { name: "Strasbourg", lat: 48.5734, lon: 7.7521 },
+      { name: "Bordeaux", lat: 44.8378, lon: -0.5792 }
     ]
   },
   IT: {
@@ -239,7 +251,10 @@ const COUNTRY_CITIES = {
       { name: "Milan", lat: 45.4642, lon: 9.1900 },
       { name: "Naples", lat: 40.8518, lon: 14.2681 },
       { name: "Turin", lat: 45.0703, lon: 7.6869 },
-      { name: "Florence", lat: 43.7696, lon: 11.2558 }
+      { name: "Florence", lat: 43.7696, lon: 11.2558 },
+      { name: "Bologna", lat: 44.4949, lon: 11.3426 },
+      { name: "Venice", lat: 45.4408, lon: 12.3155 },
+      { name: "Palermo", lat: 38.1157, lon: 13.3615 }
     ]
   },
   ES: {
@@ -251,7 +266,10 @@ const COUNTRY_CITIES = {
       { name: "Madrid", lat: 40.4168, lon: -3.7038 },
       { name: "Barcelona", lat: 41.3851, lon: 2.1734 },
       { name: "Valencia", lat: 39.4699, lon: -0.3763 },
-      { name: "Seville", lat: 37.3891, lon: -5.9845 }
+      { name: "Seville", lat: 37.3891, lon: -5.9845 },
+      { name: "Zaragoza", lat: 41.6488, lon: -0.8891 },
+      { name: "Málaga", lat: 36.7213, lon: -4.4214 },
+      { name: "Bilbao", lat: 43.2630, lon: -2.9350 }
     ]
   },
   NL: {
@@ -263,7 +281,9 @@ const COUNTRY_CITIES = {
       { name: "Amsterdam", lat: 52.3676, lon: 4.9041 },
       { name: "Rotterdam", lat: 51.9244, lon: 4.4777 },
       { name: "The Hague", lat: 52.0705, lon: 4.3007 },
-      { name: "Utrecht", lat: 52.0907, lon: 5.1214 }
+      { name: "Utrecht", lat: 52.0907, lon: 5.1214 },
+      { name: "Eindhoven", lat: 51.4416, lon: 5.4697 },
+      { name: "Groningen", lat: 53.2194, lon: 6.5665 }
     ]
   },
   PL: {
@@ -275,7 +295,514 @@ const COUNTRY_CITIES = {
       { name: "Warsaw", lat: 52.2297, lon: 21.0122 },
       { name: "Kraków", lat: 50.0647, lon: 19.9450 },
       { name: "Wrocław", lat: 51.1079, lon: 17.0385 },
-      { name: "Gdańsk", lat: 54.3520, lon: 18.6466 }
+      { name: "Poznań", lat: 52.4064, lon: 16.9252 },
+      { name: "Gdańsk", lat: 54.3520, lon: 18.6466 },
+      { name: "Łódź", lat: 51.7592, lon: 19.4560 },
+      { name: "Katowice", lat: 50.2649, lon: 19.0238 }
+    ]
+  },
+  JP: {
+    country: "Japan",
+    defaultCity: "Tokyo",
+    defaultLat: 35.6762,
+    defaultLon: 139.6503,
+    cities: [
+      { name: "Tokyo", lat: 35.6762, lon: 139.6503 },
+      { name: "Yokohama", lat: 35.4437, lon: 139.6380 },
+      { name: "Osaka", lat: 34.6937, lon: 135.5023 },
+      { name: "Nagoya", lat: 35.1815, lon: 136.9066 },
+      { name: "Sapporo", lat: 43.0618, lon: 141.3545 },
+      { name: "Fukuoka", lat: 33.5904, lon: 130.4017 },
+      { name: "Kyoto", lat: 35.0116, lon: 135.7681 }
+    ]
+  },
+  KR: {
+    country: "South Korea",
+    defaultCity: "Seoul",
+    defaultLat: 37.5665,
+    defaultLon: 126.9780,
+    cities: [
+      { name: "Seoul", lat: 37.5665, lon: 126.9780 },
+      { name: "Busan", lat: 35.1796, lon: 129.0756 },
+      { name: "Incheon", lat: 37.4563, lon: 126.7052 },
+      { name: "Daegu", lat: 35.8714, lon: 128.6014 },
+      { name: "Daejeon", lat: 36.3504, lon: 127.3845 },
+      { name: "Suwon", lat: 37.2636, lon: 127.0286 }
+    ]
+  },
+  IN: {
+    country: "India",
+    defaultCity: "New Delhi",
+    defaultLat: 28.6139,
+    defaultLon: 77.2090,
+    cities: [
+      { name: "New Delhi", lat: 28.6139, lon: 77.2090 },
+      { name: "Mumbai", lat: 19.0760, lon: 72.8777 },
+      { name: "Bengaluru", lat: 12.9716, lon: 77.5946 },
+      { name: "Hyderabad", lat: 17.3850, lon: 78.4867 },
+      { name: "Chennai", lat: 13.0827, lon: 80.2707 },
+      { name: "Kolkata", lat: 22.5726, lon: 88.3639 },
+      { name: "Pune", lat: 18.5204, lon: 73.8567 },
+      { name: "Ahmedabad", lat: 23.0225, lon: 72.5714 }
+    ]
+  },
+  BR: {
+    country: "Brazil",
+    defaultCity: "São Paulo",
+    defaultLat: -23.5505,
+    defaultLon: -46.6333,
+    cities: [
+      { name: "São Paulo", lat: -23.5505, lon: -46.6333 },
+      { name: "Rio de Janeiro", lat: -22.9068, lon: -43.1729 },
+      { name: "Brasília", lat: -15.7975, lon: -47.8919 },
+      { name: "Belo Horizonte", lat: -19.9167, lon: -43.9345 },
+      { name: "Curitiba", lat: -25.4290, lon: -49.2671 },
+      { name: "Salvador", lat: -12.9777, lon: -38.5016 },
+      { name: "Porto Alegre", lat: -30.0346, lon: -51.2177 }
+    ]
+  },
+  MX: {
+    country: "Mexico",
+    defaultCity: "Mexico City",
+    defaultLat: 19.4326,
+    defaultLon: -99.1332,
+    cities: [
+      { name: "Mexico City", lat: 19.4326, lon: -99.1332 },
+      { name: "Guadalajara", lat: 20.6597, lon: -103.3496 },
+      { name: "Monterrey", lat: 25.6866, lon: -100.3161 },
+      { name: "Puebla", lat: 19.0414, lon: -98.2063 },
+      { name: "Tijuana", lat: 32.5149, lon: -117.0382 },
+      { name: "Cancún", lat: 21.1619, lon: -86.8515 }
+    ]
+  },
+  SE: {
+    country: "Sweden",
+    defaultCity: "Stockholm",
+    defaultLat: 59.3293,
+    defaultLon: 18.0686,
+    cities: [
+      { name: "Stockholm", lat: 59.3293, lon: 18.0686 },
+      { name: "Gothenburg", lat: 57.7089, lon: 11.9746 },
+      { name: "Malmö", lat: 55.6050, lon: 13.0038 },
+      { name: "Uppsala", lat: 59.8586, lon: 17.6389 },
+      { name: "Västerås", lat: 59.6162, lon: 16.5528 }
+    ]
+  },
+  CH: {
+    country: "Switzerland",
+    defaultCity: "Zurich",
+    defaultLat: 47.3769,
+    defaultLon: 8.5417,
+    cities: [
+      { name: "Zurich", lat: 47.3769, lon: 8.5417 },
+      { name: "Geneva", lat: 46.2044, lon: 6.1432 },
+      { name: "Basel", lat: 47.5596, lon: 7.5886 },
+      { name: "Lausanne", lat: 46.5197, lon: 6.6323 },
+      { name: "Bern", lat: 46.9480, lon: 7.4474 },
+      { name: "Lucerne", lat: 47.0502, lon: 8.3093 }
+    ]
+  },
+  AT: {
+    country: "Austria",
+    defaultCity: "Vienna",
+    defaultLat: 48.2082,
+    defaultLon: 16.3738,
+    cities: [
+      { name: "Vienna", lat: 48.2082, lon: 16.3738 },
+      { name: "Graz", lat: 47.0707, lon: 15.4395 },
+      { name: "Linz", lat: 48.3069, lon: 14.2858 },
+      { name: "Salzburg", lat: 47.8095, lon: 13.0550 },
+      { name: "Innsbruck", lat: 47.2692, lon: 11.4041 }
+    ]
+  },
+  BE: {
+    country: "Belgium",
+    defaultCity: "Brussels",
+    defaultLat: 50.8503,
+    defaultLon: 4.3517,
+    cities: [
+      { name: "Brussels", lat: 50.8503, lon: 4.3517 },
+      { name: "Antwerp", lat: 51.2194, lon: 4.4025 },
+      { name: "Ghent", lat: 51.0543, lon: 3.7174 },
+      { name: "Bruges", lat: 51.2093, lon: 3.2247 },
+      { name: "Liège", lat: 50.6326, lon: 5.5797 }
+    ]
+  },
+  NO: {
+    country: "Norway",
+    defaultCity: "Oslo",
+    defaultLat: 59.9139,
+    defaultLon: 10.7522,
+    cities: [
+      { name: "Oslo", lat: 59.9139, lon: 10.7522 },
+      { name: "Bergen", lat: 60.3913, lon: 5.3221 },
+      { name: "Trondheim", lat: 63.4305, lon: 10.3951 },
+      { name: "Stavanger", lat: 58.9700, lon: 5.7331 },
+      { name: "Tromsø", lat: 69.6492, lon: 18.9553 }
+    ]
+  },
+  DK: {
+    country: "Denmark",
+    defaultCity: "Copenhagen",
+    defaultLat: 55.6761,
+    defaultLon: 12.5683,
+    cities: [
+      { name: "Copenhagen", lat: 55.6761, lon: 12.5683 },
+      { name: "Aarhus", lat: 56.1629, lon: 10.2039 },
+      { name: "Odense", lat: 55.4038, lon: 10.4024 },
+      { name: "Aalborg", lat: 57.0488, lon: 9.9217 }
+    ]
+  },
+  FI: {
+    country: "Finland",
+    defaultCity: "Helsinki",
+    defaultLat: 60.1699,
+    defaultLon: 24.9384,
+    cities: [
+      { name: "Helsinki", lat: 60.1699, lon: 24.9384 },
+      { name: "Espoo", lat: 60.2055, lon: 24.6559 },
+      { name: "Tampere", lat: 61.4978, lon: 23.7610 },
+      { name: "Vantaa", lat: 60.2934, lon: 25.0378 },
+      { name: "Oulu", lat: 65.0121, lon: 25.4651 },
+      { name: "Turku", lat: 60.4518, lon: 22.2666 }
+    ]
+  },
+  CZ: {
+    country: "Czech Republic",
+    defaultCity: "Prague",
+    defaultLat: 50.0755,
+    defaultLon: 14.4378,
+    cities: [
+      { name: "Prague", lat: 50.0755, lon: 14.4378 },
+      { name: "Brno", lat: 49.1951, lon: 16.6068 },
+      { name: "Ostrava", lat: 49.8209, lon: 18.2625 },
+      { name: "Plzeň", lat: 49.7384, lon: 13.3736 },
+      { name: "Liberec", lat: 50.7663, lon: 15.0543 }
+    ]
+  },
+  HU: {
+    country: "Hungary",
+    defaultCity: "Budapest",
+    defaultLat: 47.4979,
+    defaultLon: 19.0402,
+    cities: [
+      { name: "Budapest", lat: 47.4979, lon: 19.0402 },
+      { name: "Debrecen", lat: 47.5316, lon: 21.6273 },
+      { name: "Szeged", lat: 46.2530, lon: 20.1414 },
+      { name: "Miskolc", lat: 48.1035, lon: 20.7784 },
+      { name: "Pécs", lat: 46.0727, lon: 18.2323 },
+      { name: "Győr", lat: 47.6875, lon: 17.6504 }
+    ]
+  },
+  GR: {
+    country: "Greece",
+    defaultCity: "Athens",
+    defaultLat: 37.9838,
+    defaultLon: 23.7275,
+    cities: [
+      { name: "Athens", lat: 37.9838, lon: 23.7275 },
+      { name: "Thessaloniki", lat: 40.6401, lon: 22.9444 },
+      { name: "Patras", lat: 38.2466, lon: 21.7346 },
+      { name: "Heraklion", lat: 35.3387, lon: 25.1442 },
+      { name: "Larissa", lat: 39.6390, lon: 22.4191 }
+    ]
+  },
+  PT: {
+    country: "Portugal",
+    defaultCity: "Lisbon",
+    defaultLat: 38.7223,
+    defaultLon: -9.1393,
+    cities: [
+      { name: "Lisbon", lat: 38.7223, lon: -9.1393 },
+      { name: "Porto", lat: 41.1579, lon: -8.6291 },
+      { name: "Vila Nova de Gaia", lat: 41.1239, lon: -8.6118 },
+      { name: "Braga", lat: 41.5454, lon: -8.4265 },
+      { name: "Coimbra", lat: 40.2033, lon: -8.4103 },
+      { name: "Faro", lat: 37.0194, lon: -7.9304 }
+    ]
+  },
+  IE: {
+    country: "Ireland",
+    defaultCity: "Dublin",
+    defaultLat: 53.3498,
+    defaultLon: -6.2603,
+    cities: [
+      { name: "Dublin", lat: 53.3498, lon: -6.2603 },
+      { name: "Cork", lat: 51.8985, lon: -8.4756 },
+      { name: "Limerick", lat: 52.6638, lon: -8.6267 },
+      { name: "Galway", lat: 53.2707, lon: -9.0568 },
+      { name: "Waterford", lat: 52.2593, lon: -7.1101 }
+    ]
+  },
+  NZ: {
+    country: "New Zealand",
+    defaultCity: "Auckland",
+    defaultLat: -36.8485,
+    defaultLon: 174.7633,
+    cities: [
+      { name: "Auckland", lat: -36.8485, lon: 174.7633 },
+      { name: "Wellington", lat: -41.2865, lon: 174.7762 },
+      { name: "Christchurch", lat: -43.5321, lon: 172.6362 },
+      { name: "Hamilton", lat: -37.7870, lon: 175.2793 },
+      { name: "Tauranga", lat: -37.6878, lon: 176.1651 }
+    ]
+  },
+  SG: {
+    country: "Singapore",
+    defaultCity: "Singapore",
+    defaultLat: 1.3521,
+    defaultLon: 103.8198,
+    cities: [
+      { name: "Singapore", lat: 1.3521, lon: 103.8198 },
+      { name: "Jurong East", lat: 1.3329, lon: 103.7436 },
+      { name: "Tampines", lat: 1.3526, lon: 103.9447 },
+      { name: "Woodlands", lat: 1.4382, lon: 103.7890 }
+    ]
+  },
+  AE: {
+    country: "United Arab Emirates",
+    defaultCity: "Dubai",
+    defaultLat: 25.2048,
+    defaultLon: 55.2708,
+    cities: [
+      { name: "Dubai", lat: 25.2048, lon: 55.2708 },
+      { name: "Abu Dhabi", lat: 24.4539, lon: 54.3773 },
+      { name: "Sharjah", lat: 25.3463, lon: 55.4209 },
+      { name: "Al Ain", lat: 24.2075, lon: 55.7447 },
+      { name: "Ajman", lat: 25.4052, lon: 55.5136 }
+    ]
+  },
+  SA: {
+    country: "Saudi Arabia",
+    defaultCity: "Riyadh",
+    defaultLat: 24.7136,
+    defaultLon: 46.6753,
+    cities: [
+      { name: "Riyadh", lat: 24.7136, lon: 46.6753 },
+      { name: "Jeddah", lat: 21.4858, lon: 39.1925 },
+      { name: "Mecca", lat: 21.3891, lon: 39.8579 },
+      { name: "Medina", lat: 24.5247, lon: 39.5692 },
+      { name: "Dammam", lat: 26.4207, lon: 50.0888 }
+    ]
+  },
+  IL: {
+    country: "Israel",
+    defaultCity: "Tel Aviv",
+    defaultLat: 32.0853,
+    defaultLon: 34.7818,
+    cities: [
+      { name: "Tel Aviv", lat: 32.0853, lon: 34.7818 },
+      { name: "Jerusalem", lat: 31.7683, lon: 35.2137 },
+      { name: "Haifa", lat: 32.7940, lon: 34.9896 },
+      { name: "Rishon LeZion", lat: 31.9730, lon: 34.7925 },
+      { name: "Petah Tikva", lat: 32.0840, lon: 34.8878 }
+    ]
+  },
+  TR: {
+    country: "Turkey",
+    defaultCity: "Istanbul",
+    defaultLat: 41.0082,
+    defaultLon: 28.9784,
+    cities: [
+      { name: "Istanbul", lat: 41.0082, lon: 28.9784 },
+      { name: "Ankara", lat: 39.9334, lon: 32.8597 },
+      { name: "Izmir", lat: 38.4237, lon: 27.1428 },
+      { name: "Bursa", lat: 40.1885, lon: 29.0610 },
+      { name: "Antalya", lat: 36.8969, lon: 30.7133 },
+      { name: "Adana", lat: 36.9914, lon: 35.3308 }
+    ]
+  },
+  ZA: {
+    country: "South Africa",
+    defaultCity: "Johannesburg",
+    defaultLat: -26.2041,
+    defaultLon: 28.0473,
+    cities: [
+      { name: "Johannesburg", lat: -26.2041, lon: 28.0473 },
+      { name: "Cape Town", lat: -33.9249, lon: 18.4241 },
+      { name: "Durban", lat: -29.8587, lon: 31.0218 },
+      { name: "Pretoria", lat: -25.7479, lon: 28.2293 },
+      { name: "Port Elizabeth", lat: -33.9608, lon: 25.6022 }
+    ]
+  },
+  AR: {
+    country: "Argentina",
+    defaultCity: "Buenos Aires",
+    defaultLat: -34.6037,
+    defaultLon: -58.3816,
+    cities: [
+      { name: "Buenos Aires", lat: -34.6037, lon: -58.3816 },
+      { name: "Córdoba", lat: -31.4201, lon: -64.1888 },
+      { name: "Rosario", lat: -32.9587, lon: -60.6930 },
+      { name: "Mendoza", lat: -32.8895, lon: -68.8458 },
+      { name: "La Plata", lat: -34.9215, lon: -57.9545 }
+    ]
+  },
+  CL: {
+    country: "Chile",
+    defaultCity: "Santiago",
+    defaultLat: -33.4489,
+    defaultLon: -70.6693,
+    cities: [
+      { name: "Santiago", lat: -33.4489, lon: -70.6693 },
+      { name: "Valparaíso", lat: -33.0472, lon: -71.6127 },
+      { name: "Concepción", lat: -36.8270, lon: -73.0503 },
+      { name: "La Serena", lat: -29.9027, lon: -71.2519 },
+      { name: "Antofagasta", lat: -23.6509, lon: -70.3975 }
+    ]
+  },
+  CO: {
+    country: "Colombia",
+    defaultCity: "Bogotá",
+    defaultLat: 4.7110,
+    defaultLon: -74.0721,
+    cities: [
+      { name: "Bogotá", lat: 4.7110, lon: -74.0721 },
+      { name: "Medellín", lat: 6.2442, lon: -75.5812 },
+      { name: "Cali", lat: 3.4516, lon: -76.5320 },
+      { name: "Barranquilla", lat: 10.9685, lon: -74.7813 },
+      { name: "Cartagena", lat: 10.3910, lon: -75.4794 }
+    ]
+  },
+  ID: {
+    country: "Indonesia",
+    defaultCity: "Jakarta",
+    defaultLat: -6.2088,
+    defaultLon: 106.8456,
+    cities: [
+      { name: "Jakarta", lat: -6.2088, lon: 106.8456 },
+      { name: "Surabaya", lat: -7.2575, lon: 112.7521 },
+      { name: "Bandung", lat: -6.9175, lon: 107.6191 },
+      { name: "Medan", lat: 3.5952, lon: 98.6722 },
+      { name: "Bekasi", lat: -6.2383, lon: 106.9756 }
+    ]
+  },
+  MY: {
+    country: "Malaysia",
+    defaultCity: "Kuala Lumpur",
+    defaultLat: 3.1390,
+    defaultLon: 101.6869,
+    cities: [
+      { name: "Kuala Lumpur", lat: 3.1390, lon: 101.6869 },
+      { name: "George Town", lat: 5.4141, lon: 100.3288 },
+      { name: "Johor Bahru", lat: 1.4927, lon: 103.7414 },
+      { name: "Ipoh", lat: 4.5975, lon: 101.0901 },
+      { name: "Petaling Jaya", lat: 3.1073, lon: 101.6067 }
+    ]
+  },
+  PH: {
+    country: "Philippines",
+    defaultCity: "Manila",
+    defaultLat: 14.5995,
+    defaultLon: 120.9842,
+    cities: [
+      { name: "Manila", lat: 14.5995, lon: 120.9842 },
+      { name: "Quezon City", lat: 14.6760, lon: 121.0437 },
+      { name: "Davao City", lat: 7.1907, lon: 125.4578 },
+      { name: "Cebu City", lat: 10.3157, lon: 123.8854 },
+      { name: "Taguig", lat: 14.5176, lon: 121.0509 }
+    ]
+  },
+  TH: {
+    country: "Thailand",
+    defaultCity: "Bangkok",
+    defaultLat: 13.7563,
+    defaultLon: 100.5018,
+    cities: [
+      { name: "Bangkok", lat: 13.7563, lon: 100.5018 },
+      { name: "Chiang Mai", lat: 18.7883, lon: 98.9853 },
+      { name: "Pattaya", lat: 12.9236, lon: 100.8825 },
+      { name: "Nonthaburi", lat: 13.8591, lon: 100.5217 },
+      { name: "Hat Yai", lat: 7.0084, lon: 100.4767 }
+    ]
+  },
+  VN: {
+    country: "Vietnam",
+    defaultCity: "Ho Chi Minh City",
+    defaultLat: 10.8231,
+    defaultLon: 106.6297,
+    cities: [
+      { name: "Ho Chi Minh City", lat: 10.8231, lon: 106.6297 },
+      { name: "Hanoi", lat: 21.0285, lon: 105.8542 },
+      { name: "Da Nang", lat: 16.0544, lon: 108.2022 },
+      { name: "Hai Phong", lat: 20.8449, lon: 106.6881 },
+      { name: "Can Tho", lat: 10.0452, lon: 105.7469 }
+    ]
+  },
+  UA: {
+    country: "Ukraine",
+    defaultCity: "Kyiv",
+    defaultLat: 50.4501,
+    defaultLon: 30.5234,
+    cities: [
+      { name: "Kyiv", lat: 50.4501, lon: 30.5234 },
+      { name: "Kharkiv", lat: 49.9935, lon: 36.2304 },
+      { name: "Odesa", lat: 46.4825, lon: 30.7233 },
+      { name: "Dnipro", lat: 48.4647, lon: 35.0462 },
+      { name: "Lviv", lat: 49.8397, lon: 24.0297 }
+    ]
+  },
+  KZ: {
+    country: "Kazakhstan",
+    defaultCity: "Almaty",
+    defaultLat: 43.2220,
+    defaultLon: 76.8512,
+    cities: [
+      { name: "Almaty", lat: 43.2220, lon: 76.8512 },
+      { name: "Astana", lat: 51.1694, lon: 71.4491 },
+      { name: "Shymkent", lat: 42.3417, lon: 69.5901 },
+      { name: "Karaganda", lat: 49.8047, lon: 73.1094 }
+    ]
+  },
+  EG: {
+    country: "Egypt",
+    defaultCity: "Cairo",
+    defaultLat: 30.0444,
+    defaultLon: 31.2357,
+    cities: [
+      { name: "Cairo", lat: 30.0444, lon: 31.2357 },
+      { name: "Alexandria", lat: 31.2001, lon: 29.9187 },
+      { name: "Giza", lat: 30.0131, lon: 31.2089 },
+      { name: "Port Said", lat: 31.2653, lon: 32.3019 }
+    ]
+  },
+  PE: {
+    country: "Peru",
+    defaultCity: "Lima",
+    defaultLat: -12.0464,
+    defaultLon: -77.0428,
+    cities: [
+      { name: "Lima", lat: -12.0464, lon: -77.0428 },
+      { name: "Arequipa", lat: -16.4090, lon: -71.5375 },
+      { name: "Trujillo", lat: -8.1118, lon: -79.0288 },
+      { name: "Cusco", lat: -13.5319, lon: -71.9675 }
+    ]
+  },
+  QA: {
+    country: "Qatar",
+    defaultCity: "Doha",
+    defaultLat: 25.2854,
+    defaultLon: 51.5310,
+    cities: [
+      { name: "Doha", lat: 25.2854, lon: 51.5310 },
+      { name: "Al Rayyan", lat: 25.2919, lon: 51.4244 },
+      { name: "Al Wakrah", lat: 25.1768, lon: 51.6048 },
+      { name: "Al Khor", lat: 25.6839, lon: 51.5058 }
+    ]
+  },
+  CN: {
+    country: "China",
+    defaultCity: "Beijing",
+    defaultLat: 39.9042,
+    defaultLon: 116.4074,
+    cities: [
+      { name: "Beijing", lat: 39.9042, lon: 116.4074 },
+      { name: "Shanghai", lat: 31.2304, lon: 121.4737 },
+      { name: "Guangzhou", lat: 23.1291, lon: 113.2644 },
+      { name: "Shenzhen", lat: 22.5431, lon: 114.0579 },
+      { name: "Chengdu", lat: 30.5728, lon: 104.0668 },
+      { name: "Hangzhou", lat: 30.2741, lon: 120.1551 },
+      { name: "Wuhan", lat: 30.5928, lon: 114.3055 }
     ]
   }
 };
@@ -343,53 +870,91 @@ function renderMajorCities(countryCode) {
 let currentDetectedCountry = 'RO';
 let currentDetectedCityInfo = null;
 
-// Direct Client-Side IP Geolocation (routes directly through user's active browser VPN)
+// Direct Client-Side Geolocation powered by Cloudflare's Edge Identifier
 async function detectVisitorLocation() {
-  const sources = [
-    async () => {
-      const res = await fetch('https://ipwho.is/', { signal: AbortSignal.timeout(3000) });
-      const data = await res.json();
-      if (data && data.success && data.country_code) {
-        return {
-          countryCode: data.country_code.toUpperCase(),
-          countryName: data.country || "Australia",
-          city: data.city || "Sydney",
-          lat: data.latitude || -33.8688,
-          lon: data.longitude || 151.2093
-        };
+  // SOURCE 1: Cloudflare Edge Trace (/cdn-cgi/trace on current domain)
+  // This is direct from Cloudflare's edge proxy, completely unblockable, and zero CORS!
+  try {
+    const res = await fetch('/cdn-cgi/trace', { signal: AbortSignal.timeout(2000) });
+    if (res.ok) {
+      const text = await res.text();
+      const locMatch = text.match(/^loc=([A-Za-z]{2})/m);
+      if (locMatch) {
+        const cCode = locMatch[1].toUpperCase();
+        if (COUNTRY_CITIES[cCode]) {
+          const cData = COUNTRY_CITIES[cCode];
+          return {
+            countryCode: cCode,
+            countryName: cData.country,
+            city: cData.defaultCity,
+            lat: cData.defaultLat,
+            lon: cData.defaultLon,
+            source: 'cloudflare_edge'
+          };
+        }
       }
-      return null;
-    },
-    async () => {
-      const res = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) });
-      const data = await res.json();
-      if (data && data.country_code) {
-        return {
-          countryCode: data.country_code.toUpperCase(),
-          countryName: data.country_name,
-          city: data.city,
-          lat: data.latitude,
-          lon: data.longitude
-        };
-      }
-      return null;
-    },
-    async () => {
-      const res = await fetch('/api/detect-country', { signal: AbortSignal.timeout(2000) });
-      const data = await res.json();
-      if (data && data.country && data.source === 'cloudflare') {
-        return { countryCode: data.country.toUpperCase() };
-      }
-      return null;
     }
-  ];
+  } catch (e) {}
 
-  for (const s of sources) {
+  // SOURCE 2: Cloudflare Global Edge Fallbacks
+  const globalCf = ['https://www.cloudflare.com/cdn-cgi/trace', 'https://1.1.1.1/cdn-cgi/trace'];
+  for (const url of globalCf) {
     try {
-      const info = await s();
-      if (info && info.countryCode) return info;
+      const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
+      if (res.ok) {
+        const text = await res.text();
+        const locMatch = text.match(/^loc=([A-Za-z]{2})/m);
+        if (locMatch) {
+          const cCode = locMatch[1].toUpperCase();
+          if (COUNTRY_CITIES[cCode]) {
+            const cData = COUNTRY_CITIES[cCode];
+            return {
+              countryCode: cCode,
+              countryName: cData.country,
+              city: cData.defaultCity,
+              lat: cData.defaultLat,
+              lon: cData.defaultLon,
+              source: 'cloudflare_global'
+            };
+          }
+        }
+      }
     } catch (e) {}
   }
+
+  // SOURCE 3: Backend API /api/detect-country
+  try {
+    const res = await fetch('/api/detect-country', { signal: AbortSignal.timeout(2000) });
+    const data = await res.json();
+    if (data && data.country && COUNTRY_CITIES[data.country]) {
+      const cData = COUNTRY_CITIES[data.country];
+      return {
+        countryCode: data.country,
+        countryName: cData.country,
+        city: cData.defaultCity,
+        lat: cData.defaultLat,
+        lon: cData.defaultLon,
+        source: 'backend_header'
+      };
+    }
+  } catch (e) {}
+
+  // SOURCE 4: ipwho.is IP Geolocation
+  try {
+    const res = await fetch('https://ipwho.is/', { signal: AbortSignal.timeout(2500) });
+    const data = await res.json();
+    if (data && data.success && data.country_code && COUNTRY_CITIES[data.country_code]) {
+      return {
+        countryCode: data.country_code.toUpperCase(),
+        countryName: data.country,
+        city: data.city,
+        lat: data.latitude,
+        lon: data.longitude,
+        source: 'ipwho'
+      };
+    }
+  } catch (e) {}
+
   return null;
 }
 
@@ -591,21 +1156,75 @@ function setupGeolocation() {
       const val = customCityInput.value.trim();
       if (!val) return;
 
+      const normVal = val.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+      // 1. FAST LOCAL MATCH: Search active country's cities first
+      const activeCode = (countrySelect ? countrySelect.value : currentDetectedCountry || 'RO').toUpperCase();
+      const activeCountryData = COUNTRY_CITIES[activeCode];
+      if (activeCountryData && activeCountryData.cities) {
+        const match = activeCountryData.cities.find(c => {
+          const norm = c.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          return norm === normVal || norm.startsWith(normVal) || normVal.startsWith(norm);
+        });
+        if (match) {
+          setLocation(match.name, match.lat, match.lon);
+          if (locationModal) locationModal.classList.add('hidden');
+          showToast(`📍 Location set to ${match.name}`);
+          return;
+        }
+      }
+
+      // 2. GLOBAL LOCAL MATCH: Search across ALL 49 countries in our registry
+      for (const [code, cData] of Object.entries(COUNTRY_CITIES)) {
+        if (!cData.cities) continue;
+        const match = cData.cities.find(c => {
+          const norm = c.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          return norm === normVal || norm.startsWith(normVal) || normVal.startsWith(norm);
+        });
+        if (match) {
+          if (countrySelect && countrySelect.value !== code) {
+            countrySelect.value = code;
+            currentDetectedCountry = code;
+            renderMajorCities(code);
+          }
+          setLocation(match.name, match.lat, match.lon);
+          if (locationModal) locationModal.classList.add('hidden');
+          showToast(`📍 Location set to ${match.name} (${cData.country})`);
+          return;
+        }
+      }
+
+      // 3. NOMINATIM OPENSTREETMAP LOOKUP (Fallback for smaller towns & districts)
       try {
-        const countryFilter = countrySelect ? `&countrycodes=${countrySelect.value.toLowerCase()}` : '';
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}${countryFilter}&limit=1`);
-        const data = await res.json();
+        let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&countrycodes=${activeCode.toLowerCase()}&limit=1`);
+        let data = await res.json();
+
+        // If not found in active country, search worldwide without country boundary
+        if (!data || data.length === 0) {
+          res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&limit=1&addressdetails=1`);
+          data = await res.json();
+        }
+
         if (data && data.length > 0) {
           const lat = parseFloat(data[0].lat);
           const lon = parseFloat(data[0].lon);
-          const displayName = data[0].display_name.split(',')[0];
+          const displayName = (data[0].name || data[0].display_name.split(',')[0]).trim();
+          
+          const osmCountry = (data[0].address && data[0].address.country_code ? data[0].address.country_code.toUpperCase() : null);
+          if (osmCountry && countrySelect && COUNTRY_CITIES[osmCountry]) {
+            countrySelect.value = osmCountry;
+            currentDetectedCountry = osmCountry;
+            renderMajorCities(osmCountry);
+          }
+
           setLocation(displayName, lat, lon);
           if (locationModal) locationModal.classList.add('hidden');
+          showToast(`📍 Location set to ${displayName}`);
         } else {
-          showToast(`Could not find location "${val}". Please try another name or pick from the examples.`);
+          showToast(`Could not find "${val}". Please try another name or pick from the examples below.`, 'warning');
         }
-      } catch (e) {
-        showToast("Error searching city. Please pick from the list below.");
+      } catch (err) {
+        showToast("Error searching city. Please pick from the list below.", 'error');
       }
     };
   }
@@ -1285,10 +1904,24 @@ createAlertForm.addEventListener('submit', async (e) => {
   }
 });
 
-function showToast(msg) {
+function showToast(msg, type = 'success') {
+  if (!toast || !toastMsg) return;
   toastMsg.textContent = msg;
+  const icon = toast.querySelector('i');
+  if (type === 'error') {
+    toast.className = "fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-rose-600 text-white font-bold shadow-2xl flex items-center space-x-2 text-xs transition duration-300";
+    if (icon) icon.setAttribute('data-lucide', 'alert-circle');
+  } else if (type === 'warning') {
+    toast.className = "fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-amber-500 text-slate-950 font-bold shadow-2xl flex items-center space-x-2 text-xs transition duration-300";
+    if (icon) icon.setAttribute('data-lucide', 'alert-triangle');
+  } else {
+    toast.className = "fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold shadow-2xl flex items-center space-x-2 text-xs transition duration-300";
+    if (icon) icon.setAttribute('data-lucide', 'check');
+  }
+  safeRenderIcons();
   toast.classList.remove('hidden');
-  setTimeout(() => toast.classList.add('hidden'), 3500);
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => toast.classList.add('hidden'), 3500);
 }
 
 // View Switching

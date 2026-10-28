@@ -85,6 +85,12 @@ STORE_BRANCHES: Dict[str, List[Dict]] = {
         {"name": "JB Hi-Fi The Galeries Sydney CBD", "address": "500 George St, Sydney NSW 2000", "lat": -33.8728, "lon": 151.2075},
         {"name": "JB Hi-Fi Bourke St Melbourne", "address": "206 Bourke St, Melbourne VIC 3000", "lat": -37.8124, "lon": 144.9671},
         {"name": "JB Hi-Fi Brisbane City", "address": "Queen St Mall, Brisbane QLD 4000", "lat": -27.4695, "lon": 153.0255}
+    ],
+    "Proleasing Motors": [
+        {"name": "Proleasing Motors Bucov / Ploiești (Showroom)", "address": "Str. Tineretului Nr. 4, Sat Bucov, Prahova", "lat": 44.9723, "lon": 26.0821},
+        {"name": "Proleasing Motors București Nord", "address": "Șoseaua București-Nord, București", "lat": 44.4981, "lon": 26.1124},
+        {"name": "Proleasing Motors Buzău", "address": "Șoseaua Spătarului 30, Buzău", "lat": 45.1325, "lon": 26.8123},
+        {"name": "Proleasing Motors Târgoviște", "address": "Calea Câmpulung 54, Târgoviște", "lat": 44.9351, "lon": 25.4412}
     ]
 }
 
