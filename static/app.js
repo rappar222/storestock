@@ -1697,7 +1697,17 @@ function renderResults() {
         </div>
 
         <div class="relative w-full h-40 rounded-xl bg-slate-900/80 overflow-hidden flex items-center justify-center p-2 group-hover:scale-[1.02] transition">
-          <img src="${imgUrl}" alt="${item.title}" class="max-h-full max-w-full object-contain" loading="lazy" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23475569\' stroke-width=\'1.5\'><rect width=\'18\' height=\'18\' x=\'3\' y=\'3\' rx=\'2\'/><circle cx=\'9\' cy=\'9\' r=\'2\'/><path d=\'m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\'/></svg>'"/>
+          <!-- Progressive Loading Skeleton Placeholder -->
+          <div class="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-800/80 to-slate-900 animate-pulse pointer-events-none transition-opacity duration-300"></div>
+          <img 
+            src="${imgUrl}" 
+            alt="${item.title}" 
+            class="max-h-full max-w-full object-contain opacity-0 transition-opacity duration-300 relative z-10" 
+            loading="lazy" 
+            decoding="async"
+            onload="this.classList.remove('opacity-0'); if (this.previousElementSibling) this.previousElementSibling.style.opacity = '0';"
+            onerror="this.onerror=null;this.classList.remove('opacity-0');if (this.previousElementSibling) this.previousElementSibling.style.opacity = '0';this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23475569\' stroke-width=\'1.5\'><rect width=\'18\' height=\'18\' x=\'3\' y=\'3\' rx=\'2\'/><circle cx=\'9\' cy=\'9\' r=\'2\'/><path d=\'m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\'/></svg>'"
+          />
         </div>
 
         <h3 class="text-xs sm:text-sm font-semibold text-slate-100 line-clamp-2" title="${item.title}">

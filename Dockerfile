@@ -1,47 +1,49 @@
-# Use official lightweight Python image
+# Stage 1: Compile High-Speed Rust Axum Gateway Binary
+FROM rust:1.80-slim as rust-builder
+
+WORKDIR /build
+COPY rust_server/Cargo.toml rust_server/Cargo.lock* ./
+COPY rust_server/countries.json ./
+COPY rust_server/src ./src
+
+RUN cargo build --release
+
+# Stage 2: Final Production Container (Rust Gateway + Python Scraper Worker)
 FROM python:3.11-slim
 
-# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PORT=3000
 
-# Install system dependencies (curl for healthcheck and certificates for TLS)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Create non-root user for security
 RUN useradd -m -u 1000 appuser
 
-# Copy dependency requirements first to take advantage of Docker layer caching
 COPY requirements.txt .
-
-# Install Python packages
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code
 COPY core/ ./core/
 COPY providers/ ./providers/
 COPY static/ ./static/
 COPY server.py .
+COPY docker-entrypoint.sh .
+RUN chmod +x docker-entrypoint.sh
 
-# Create empty alerts database file and transfer ownership to appuser
+# Copy compiled native Rust gateway from builder stage
+COPY --from=rust-builder /build/target/release/storestock_server .
+
 RUN touch alerts_db.json && chown -R appuser:appuser /app
 
-# Switch to non-root user
 USER appuser
 
-# Expose default application port
 EXPOSE 3000
 
-# Health check to ensure service is actively responding
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT}/ || exit 1
 
-# Start Uvicorn ASGI server
-CMD ["sh", "-c", "uvicorn server:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["./docker-entrypoint.sh"]

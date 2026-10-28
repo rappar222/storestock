@@ -1,0 +1,1 @@
+/home/radu/Nextcloud/work/storestock/rust_server/target/release/storestock_server: /home/radu/Nextcloud/work/storestock/rust_server/countries.json /home/radu/Nextcloud/work/storestock/rust_server/src/main.rs
