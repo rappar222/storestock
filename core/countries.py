@@ -21,56 +21,56 @@ COUNTRIES_REGISTRY: Dict[str, Dict[str, Any]] = {
         "flag": "🇩🇪",
         "currency": "EUR",
         "locale": "de_DE",
-        "stores": ["Amazon.de", "MediaMarkt", "Saturn", "Mindfactory", "Cyberport", "Wolt", "Flink"]
+        "stores": ["Amazon.de", "MediaMarkt", "Saturn", "Mindfactory", "Cyberport", "Alternate DE"]
     },
     "GB": {
         "name": "United Kingdom",
         "flag": "🇬🇧",
         "currency": "GBP",
         "locale": "en_GB",
-        "stores": ["Amazon.co.uk", "Currys", "Scan", "Argos", "Deliveroo", "Uber Eats"]
+        "stores": ["Amazon.co.uk", "Currys", "Scan", "Argos", "Overclockers UK", "Box.co.uk"]
     },
     "FR": {
         "name": "France",
         "flag": "🇫🇷",
         "currency": "EUR",
         "locale": "fr_FR",
-        "stores": ["Amazon.fr", "Fnac", "Darty", "LDLC", "Cdiscount", "Deliveroo"]
+        "stores": ["Amazon.fr", "Fnac", "Darty", "LDLC", "Cdiscount", "Boulanger"]
     },
     "IT": {
         "name": "Italy",
         "flag": "🇮🇹",
         "currency": "EUR",
         "locale": "it_IT",
-        "stores": ["Amazon.it", "MediaWorld", "Unieuro", "ePRICE", "Glovo"]
+        "stores": ["Amazon.it", "MediaWorld", "Unieuro", "ePRICE", "Monclick"]
     },
     "ES": {
         "name": "Spain",
         "flag": "🇪🇸",
         "currency": "EUR",
         "locale": "es_ES",
-        "stores": ["Amazon.es", "PCComponentes", "MediaMarkt ES", "El Corte Inglés", "Glovo"]
+        "stores": ["Amazon.es", "PCComponentes", "MediaMarkt ES", "El Corte Inglés", "Coolmod"]
     },
     "PL": {
         "name": "Poland",
         "flag": "🇵🇱",
         "currency": "PLN",
         "locale": "pl_PL",
-        "stores": ["Allegro", "x-kom", "Media Expert", "Amazon.pl", "Glovo", "Wolt"]
+        "stores": ["Allegro", "x-kom", "Media Expert", "Amazon.pl", "Morele.net"]
     },
     "NL": {
         "name": "Netherlands",
         "flag": "🇳🇱",
         "currency": "EUR",
         "locale": "nl_NL",
-        "stores": ["Bol.com", "Coolblue", "Megekko", "Amazon.nl", "Uber Eats"]
+        "stores": ["Bol.com", "Coolblue", "Megekko", "Amazon.nl", "Alternate NL"]
     },
     "CA": {
         "name": "Canada",
         "flag": "🇨🇦",
         "currency": "CAD",
         "locale": "en_CA",
-        "stores": ["Amazon.ca", "Canada Computers", "Best Buy CA", "Memory Express", "DoorDash"]
+        "stores": ["Amazon.ca", "Canada Computers", "Best Buy CA", "Memory Express", "Newegg CA"]
     },
     "AU": {
         "name": "Australia",
@@ -84,7 +84,7 @@ COUNTRIES_REGISTRY: Dict[str, Dict[str, Any]] = {
         "flag": "🇯🇵",
         "currency": "JPY",
         "locale": "ja_JP",
-        "stores": ["Amazon.co.jp", "Yodobashi", "Bic Camera", "Rakuten"]
+        "stores": ["Amazon.co.jp", "Yodobashi", "Bic Camera", "Rakuten", "Sofmap"]
     },
     "KR": {
         "name": "South Korea",
@@ -98,105 +98,105 @@ COUNTRIES_REGISTRY: Dict[str, Dict[str, Any]] = {
         "flag": "🇮🇳",
         "currency": "INR",
         "locale": "en_IN",
-        "stores": ["Amazon.in", "Flipkart", "Croma", "Blinkit", "Zepto"]
+        "stores": ["Amazon.in", "Flipkart", "Croma", "Reliance Digital"]
     },
     "BR": {
         "name": "Brazil",
         "flag": "🇧🇷",
         "currency": "BRL",
         "locale": "pt_BR",
-        "stores": ["Mercado Livre BR", "KaBuM!", "Amazon.com.br", "iFood"]
+        "stores": ["Mercado Livre BR", "KaBuM!", "Amazon.com.br", "Pichau"]
     },
     "MX": {
         "name": "Mexico",
         "flag": "🇲🇽",
         "currency": "MXN",
         "locale": "es_MX",
-        "stores": ["Mercado Libre MX", "Amazon.com.mx", "Cyberpuerta", "Rappi"]
+        "stores": ["Mercado Libre MX", "Amazon.com.mx", "Cyberpuerta"]
     },
     "SE": {
         "name": "Sweden",
         "flag": "🇸🇪",
         "currency": "SEK",
         "locale": "sv_SE",
-        "stores": ["Inet", "Webhallen", "Amazon.se", "Elgiganten", "Wolt"]
+        "stores": ["Inet", "Webhallen", "Amazon.se", "Elgiganten", "Komplett.se"]
     },
     "CH": {
         "name": "Switzerland",
         "flag": "🇨🇭",
         "currency": "CHF",
         "locale": "de_CH",
-        "stores": ["Digitec Galaxus", "Brack.ch", "Microspot"]
+        "stores": ["Digitec Galaxus", "Brack.ch", "Microspot", "Steg Electronics"]
     },
     "AT": {
         "name": "Austria",
         "flag": "🇦🇹",
         "currency": "EUR",
         "locale": "de_AT",
-        "stores": ["Amazon.de", "MediaMarkt AT", "Cyberport AT", "Lieferando"]
+        "stores": ["Amazon.de", "MediaMarkt AT", "Cyberport AT", "e-tec.at"]
     },
     "BE": {
         "name": "Belgium",
         "flag": "🇧🇪",
         "currency": "EUR",
         "locale": "nl_BE",
-        "stores": ["Bol.com", "Coolblue BE", "MediaMarkt BE"]
+        "stores": ["Bol.com", "Coolblue BE", "MediaMarkt BE", "Alternate BE"]
     },
     "NO": {
         "name": "Norway",
         "flag": "🇳🇴",
         "currency": "NOK",
         "locale": "no_NO",
-        "stores": ["Komplett.no", "Elkjøp", "NetOnNet", "Wolt"]
+        "stores": ["Komplett.no", "Elkjøp", "NetOnNet", "Power NO"]
     },
     "DK": {
         "name": "Denmark",
         "flag": "🇩🇰",
         "currency": "DKK",
         "locale": "da_DK",
-        "stores": ["Proshop.dk", "Elgiganten DK", "Komplett.dk", "Wolt"]
+        "stores": ["Proshop.dk", "Elgiganten DK", "Komplett.dk", "Computersalg.dk"]
     },
     "FI": {
         "name": "Finland",
         "flag": "🇫🇮",
         "currency": "EUR",
         "locale": "fi_FI",
-        "stores": ["Verkkokauppa", "Jimms.fi", "Gigantti", "Wolt"]
+        "stores": ["Verkkokauppa", "Jimms.fi", "Gigantti", "Power FI"]
     },
     "CZ": {
         "name": "Czech Republic",
         "flag": "🇨🇿",
         "currency": "CZK",
         "locale": "cs_CZ",
-        "stores": ["Alza.cz", "CZC.cz", "Datart", "Wolt"]
+        "stores": ["Alza.cz", "CZC.cz", "Datart", "TSBOHEMIA"]
     },
     "HU": {
         "name": "Hungary",
         "flag": "🇭🇺",
         "currency": "HUF",
         "locale": "hu_HU",
-        "stores": ["eMAG.hu", "Alza.hu", "iPon", "Wolt"]
+        "stores": ["eMAG.hu", "Alza.hu", "iPon", "MediaMarkt HU"]
     },
     "GR": {
         "name": "Greece",
         "flag": "🇬🇷",
         "currency": "EUR",
         "locale": "el_GR",
-        "stores": ["Skroutz", "Plaisio", "Public.gr", "Wolt"]
+        "stores": ["Skroutz", "Plaisio", "Public.gr", "Kotsovolos"]
     },
     "PT": {
         "name": "Portugal",
         "flag": "🇵🇹",
         "currency": "EUR",
         "locale": "pt_PT",
-        "stores": ["Worten", "PCDIGA", "Fnac PT", "Glovo"]
+        "stores": ["Worten", "PCDIGA", "Fnac PT", "Radio Popular"]
     },
     "IE": {
         "name": "Ireland",
         "flag": "🇮🇪",
         "currency": "EUR",
         "locale": "en_IE",
-        "stores": ["Amazon.co.uk (IE)", "Currys IE", "Komplett.ie", "Deliveroo"]
+        "stores": ["Amazon.co.uk (IE)", "Currys IE", "Komplett.ie", "Harvey Norman IE"]
     },
     "NZ": {
         "name": "New Zealand",

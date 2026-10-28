@@ -27,6 +27,38 @@ from providers.au.jbhifi import JBHiFiProvider
 from providers.cars.auto_market import AutoMarketProvider
 from providers.ro.proleasing import ProleasingProvider
 
+# International Country Flagship Retailers
+from providers.de.mediamarkt import MediaMarktDEProvider
+from providers.de.mindfactory import MindfactoryDEProvider
+from providers.gb.currys import CurrysUKProvider
+from providers.gb.scan import ScanUKProvider
+from providers.fr.fnac import FnacFRProvider
+from providers.fr.ldlc import LDLCFRProvider
+from providers.it.mediaworld import MediaWorldITProvider
+from providers.it.unieuro import UnieuroITProvider
+from providers.es.pccomponentes import PcComponentesESProvider
+from providers.es.mediamarkt_es import MediaMarktESProvider
+from providers.ca.canadacomputers import CanadaComputersProvider
+from providers.ca.memoryexpress import MemoryExpressCAProvider
+from providers.pl.xkom import XKomPLProvider
+from providers.pl.mediaexpert import MediaExpertPLProvider
+from providers.nl.coolblue import CoolblueNLProvider
+from providers.nl.megekko import MegekkoNLProvider
+from providers.se.webhallen import WebhallenSEProvider
+from providers.se.inet import InetSEProvider
+from providers.ch.digitec import DigitecCHProvider
+from providers.at.cyberport_at import CyberportATProvider
+from providers.be.alternate_be import AlternateBEProvider
+from providers.no.komplett_no import KomplettNOProvider
+from providers.dk.proshop_dk import ProshopDKProvider
+from providers.fi.verkkokauppa import VerkkokauppaFIProvider
+from providers.cz.alza_cz import AlzaCZProvider
+from providers.hu.alza_hu import AlzaHUProvider
+from providers.gr.plaisio import PlaisioGRProvider
+from providers.pt.worten import WortenPTProvider
+from providers.ie.currys_ie import CurrysIEProvider
+from providers.jp.yodobashi import YodobashiJPProvider
+
 class SearchEngine:
     def __init__(self):
         self.alert_manager = AlertManager()
@@ -67,6 +99,8 @@ class SearchEngine:
                 AutoMarketProvider("AU")
             ],
             "DE": [
+                MediaMarktDEProvider(),
+                MindfactoryDEProvider(),
                 AmazonProvider("DE"),
                 AliExpressProvider("DE"),
                 TemuProvider("DE"),
@@ -74,11 +108,172 @@ class SearchEngine:
                 AutoMarketProvider("DE")
             ],
             "GB": [
+                CurrysUKProvider(),
+                ScanUKProvider(),
                 AmazonProvider("GB"),
                 AliExpressProvider("GB"),
                 TemuProvider("GB"),
                 AlibabaProvider("GB"),
                 AutoMarketProvider("GB")
+            ],
+            "FR": [
+                FnacFRProvider(),
+                LDLCFRProvider(),
+                AmazonProvider("FR"),
+                AliExpressProvider("FR"),
+                TemuProvider("FR"),
+                AlibabaProvider("FR"),
+                AutoMarketProvider("FR")
+            ],
+            "IT": [
+                MediaWorldITProvider(),
+                UnieuroITProvider(),
+                AmazonProvider("IT"),
+                AliExpressProvider("IT"),
+                TemuProvider("IT"),
+                AlibabaProvider("IT"),
+                AutoMarketProvider("IT")
+            ],
+            "ES": [
+                PcComponentesESProvider(),
+                MediaMarktESProvider(),
+                AmazonProvider("ES"),
+                AliExpressProvider("ES"),
+                TemuProvider("ES"),
+                AlibabaProvider("ES"),
+                AutoMarketProvider("ES")
+            ],
+            "CA": [
+                CanadaComputersProvider(),
+                MemoryExpressCAProvider(),
+                AmazonProvider("CA"),
+                AliExpressProvider("CA"),
+                TemuProvider("CA"),
+                AlibabaProvider("CA"),
+                AutoMarketProvider("CA")
+            ],
+            "PL": [
+                XKomPLProvider(),
+                MediaExpertPLProvider(),
+                AmazonProvider("PL"),
+                AliExpressProvider("PL"),
+                TemuProvider("PL"),
+                AlibabaProvider("PL"),
+                AutoMarketProvider("PL")
+            ],
+            "NL": [
+                CoolblueNLProvider(),
+                MegekkoNLProvider(),
+                AmazonProvider("NL"),
+                AliExpressProvider("NL"),
+                TemuProvider("NL"),
+                AlibabaProvider("NL"),
+                AutoMarketProvider("NL")
+            ],
+            "SE": [
+                WebhallenSEProvider(),
+                InetSEProvider(),
+                AmazonProvider("SE"),
+                AliExpressProvider("SE"),
+                TemuProvider("SE"),
+                AlibabaProvider("SE"),
+                AutoMarketProvider("SE")
+            ],
+            "CH": [
+                DigitecCHProvider(),
+                AmazonProvider("DE"),
+                AliExpressProvider("CH"),
+                TemuProvider("CH"),
+                AlibabaProvider("CH"),
+                AutoMarketProvider("CH")
+            ],
+            "AT": [
+                CyberportATProvider(),
+                AmazonProvider("DE"),
+                AliExpressProvider("AT"),
+                TemuProvider("AT"),
+                AlibabaProvider("AT"),
+                AutoMarketProvider("AT")
+            ],
+            "BE": [
+                AlternateBEProvider(),
+                AmazonProvider("NL"),
+                AliExpressProvider("BE"),
+                TemuProvider("BE"),
+                AlibabaProvider("BE"),
+                AutoMarketProvider("BE")
+            ],
+            "NO": [
+                KomplettNOProvider(),
+                AmazonProvider("SE"),
+                AliExpressProvider("NO"),
+                TemuProvider("NO"),
+                AlibabaProvider("NO"),
+                AutoMarketProvider("NO")
+            ],
+            "DK": [
+                ProshopDKProvider(),
+                AmazonProvider("DE"),
+                AliExpressProvider("DK"),
+                TemuProvider("DK"),
+                AlibabaProvider("DK"),
+                AutoMarketProvider("DK")
+            ],
+            "FI": [
+                VerkkokauppaFIProvider(),
+                AmazonProvider("SE"),
+                AliExpressProvider("FI"),
+                TemuProvider("FI"),
+                AlibabaProvider("FI"),
+                AutoMarketProvider("FI")
+            ],
+            "CZ": [
+                AlzaCZProvider(),
+                AmazonProvider("DE"),
+                AliExpressProvider("CZ"),
+                TemuProvider("CZ"),
+                AlibabaProvider("CZ"),
+                AutoMarketProvider("CZ")
+            ],
+            "HU": [
+                AlzaHUProvider(),
+                AmazonProvider("DE"),
+                AliExpressProvider("HU"),
+                TemuProvider("HU"),
+                AlibabaProvider("HU"),
+                AutoMarketProvider("HU")
+            ],
+            "GR": [
+                PlaisioGRProvider(),
+                AmazonProvider("DE"),
+                AliExpressProvider("GR"),
+                TemuProvider("GR"),
+                AlibabaProvider("GR"),
+                AutoMarketProvider("GR")
+            ],
+            "PT": [
+                WortenPTProvider(),
+                AmazonProvider("ES"),
+                AliExpressProvider("PT"),
+                TemuProvider("PT"),
+                AlibabaProvider("PT"),
+                AutoMarketProvider("PT")
+            ],
+            "IE": [
+                CurrysIEProvider(),
+                AmazonProvider("GB"),
+                AliExpressProvider("IE"),
+                TemuProvider("IE"),
+                AlibabaProvider("IE"),
+                AutoMarketProvider("IE")
+            ],
+            "JP": [
+                YodobashiJPProvider(),
+                AmazonProvider("JP"),
+                AliExpressProvider("JP"),
+                TemuProvider("JP"),
+                AlibabaProvider("JP"),
+                AutoMarketProvider("JP")
             ]
         }
         self._cache: Dict[str, tuple[float, List[StoreResult], Dict]] = {}
