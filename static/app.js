@@ -1916,13 +1916,13 @@ function showToast(msg, type = 'success') {
   toastMsg.textContent = msg;
   const icon = toast.querySelector('i');
   if (type === 'error') {
-    toast.className = "fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-rose-600 text-white font-bold shadow-2xl flex items-center space-x-2 text-xs transition duration-300";
+    toast.className = "fixed bottom-20 right-6 z-50 px-4 py-3 rounded-xl bg-rose-600 text-white font-bold shadow-2xl flex items-center space-x-2 text-xs transition duration-300";
     if (icon) icon.setAttribute('data-lucide', 'alert-circle');
   } else if (type === 'warning') {
-    toast.className = "fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-amber-500 text-slate-950 font-bold shadow-2xl flex items-center space-x-2 text-xs transition duration-300";
+    toast.className = "fixed bottom-20 right-6 z-50 px-4 py-3 rounded-xl bg-amber-500 text-slate-950 font-bold shadow-2xl flex items-center space-x-2 text-xs transition duration-300";
     if (icon) icon.setAttribute('data-lucide', 'alert-triangle');
   } else {
-    toast.className = "fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold shadow-2xl flex items-center space-x-2 text-xs transition duration-300";
+    toast.className = "fixed bottom-20 right-6 z-50 px-4 py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold shadow-2xl flex items-center space-x-2 text-xs transition duration-300";
     if (icon) icon.setAttribute('data-lucide', 'check');
   }
   safeRenderIcons();
@@ -2010,6 +2010,7 @@ sortSelect.addEventListener('change', () => {
 
 // --- Feedback & Bug Report Modal Handling ---
 const feedbackModal = document.getElementById('feedbackModal');
+const floatingFeedbackBtn = document.getElementById('floatingFeedbackBtn');
 const openFeedbackModalBtn = document.getElementById('openFeedbackModalBtn');
 const openFeedbackFooterBtn = document.getElementById('openFeedbackFooterBtn');
 const closeFeedbackModalBtn = document.getElementById('closeFeedbackModalBtn');
@@ -2150,6 +2151,9 @@ if (feedbackRemoveScreenshotBtn) {
   feedbackRemoveScreenshotBtn.addEventListener('click', removeScreenshot);
 }
 
+if (floatingFeedbackBtn) {
+  floatingFeedbackBtn.addEventListener('click', openFeedbackModal);
+}
 if (openFeedbackModalBtn) {
   openFeedbackModalBtn.addEventListener('click', openFeedbackModal);
 }

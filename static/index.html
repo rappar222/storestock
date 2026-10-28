@@ -147,16 +147,6 @@
           <span class="hidden md:inline">Architecture</span>
           <i data-lucide="download" class="w-3 h-3 text-slate-400"></i>
         </a>
-
-        <!-- Feedback / Bug Report Button -->
-        <button 
-          id="openFeedbackModalBtn" 
-          class="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 border border-amber-500/40 hover:border-amber-400 rounded-xl px-3 py-1.5 text-xs font-semibold text-amber-400 hover:text-amber-300 transition shadow-sm"
-          title="Send Feedback, Bug Reports & Improvements"
-        >
-          <i data-lucide="message-square-plus" class="w-3.5 h-3.5"></i>
-          <span class="hidden md:inline">Feedback</span>
-        </button>
       </div>
     </div>
   </header>
@@ -605,8 +595,18 @@
   <!-- On-Screen JS Error Diagnostics Banner -->
   <div id="jsErrorBanner" class="hidden fixed top-0 left-0 right-0 z-[9999] bg-rose-600 text-white p-3 text-xs font-mono font-bold shadow-2xl flex items-center justify-between"></div>
 
-  <!-- Toast Notification -->
-  <div id="toast" class="hidden fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold shadow-2xl flex items-center space-x-2 text-xs transition duration-300">
+  <!-- Floating Fixed Corner Feedback Button (Fixed to bottom right, unaffected by scrolling) -->
+  <button 
+    id="floatingFeedbackBtn" 
+    class="fixed bottom-6 right-6 z-40 group flex items-center space-x-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold text-xs py-2.5 px-4 rounded-full shadow-2xl shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+    title="Send Feedback, Bug Reports & Suggestions"
+  >
+    <i data-lucide="message-square-plus" class="w-4 h-4 font-bold shrink-0"></i>
+    <span class="tracking-wide">Feedback</span>
+  </button>
+
+  <!-- Toast Notification (Floats above the fixed corner button) -->
+  <div id="toast" class="hidden fixed bottom-20 right-6 z-50 px-4 py-3 rounded-xl bg-emerald-500 text-slate-950 font-bold shadow-2xl flex items-center space-x-2 text-xs transition duration-300">
     <i data-lucide="check" class="w-4 h-4"></i>
     <span id="toastMsg">Restock alert saved!</span>
   </div>
@@ -652,6 +652,6 @@
       }
     });
   </script>
-  <script src="/static/app.js?v=3.5"></script>
+  <script src="/static/app.js?v=3.6"></script>
 </body>
 </html>
