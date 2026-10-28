@@ -326,19 +326,28 @@ class SearchEngine:
         synonyms = ai_intent.get("synonyms", [])
         alt_query = synonyms[0] if synonyms and synonyms[0].lower() != query.lower().strip() else None
 
+        STORE_TIMEOUT_SECONDS = 0.95
+
         async def query_provider(p: BaseProvider):
-            res = await p.search(query)
-            if alt_query:
-                try:
-                    res_alt = await p.search(alt_query)
-                    urls = {x.product_url for x in res}
-                    for it in res_alt:
-                        if it.product_url not in urls:
-                            res.append(it)
-                            urls.add(it.product_url)
-                except Exception:
-                    pass
-            return res
+            try:
+                res = await asyncio.wait_for(p.search(query), timeout=STORE_TIMEOUT_SECONDS)
+                if alt_query and len(res) == 0:
+                    try:
+                        res_alt = await asyncio.wait_for(p.search(alt_query), timeout=STORE_TIMEOUT_SECONDS * 0.75)
+                        urls = {x.product_url for x in res}
+                        for it in res_alt:
+                            if it.product_url not in urls:
+                                res.append(it)
+                                urls.add(it.product_url)
+                    except Exception:
+                        pass
+                return res
+            except asyncio.TimeoutError:
+                print(f"[SearchEngine] Store '{p.store_name}' exceeded {STORE_TIMEOUT_SECONDS}s SLA timeout, skipping.")
+                return []
+            except Exception as e:
+                print(f"[SearchEngine] Store '{p.store_name}' error: {e}")
+                return []
 
         tasks = [query_provider(p) for p in providers]
         responses = await asyncio.gather(*tasks, return_exceptions=True)
@@ -415,13 +424,15 @@ class SearchEngine:
         synonyms = ai_intent.get("synonyms", [])
         alt_query = synonyms[0] if synonyms and synonyms[0].lower() != query.lower().strip() else None
 
+        STORE_STREAM_TIMEOUT = 1.15
+
         async def run_provider(provider: BaseProvider):
+            start_p = time.time()
             try:
-                start_p = time.time()
-                res = await provider.search(query)
-                if alt_query:
+                res = await asyncio.wait_for(provider.search(query), timeout=STORE_STREAM_TIMEOUT)
+                if alt_query and len(res) == 0:
                     try:
-                        res_alt = await provider.search(alt_query)
+                        res_alt = await asyncio.wait_for(provider.search(alt_query), timeout=STORE_STREAM_TIMEOUT * 0.75)
                         urls = {x.product_url for x in res}
                         for it in res_alt:
                             if it.product_url not in urls:
@@ -446,10 +457,19 @@ class SearchEngine:
                     "elapsed_ms": round((time.time() - start_p) * 1000, 1),
                     "items": [r.model_dump() for r in res]
                 }
+            except asyncio.TimeoutError:
+                return {
+                    "store_name": provider.store_name,
+                    "store_icon": provider.store_icon,
+                    "elapsed_ms": round((time.time() - start_p) * 1000, 1),
+                    "error": f"Exceeded {STORE_STREAM_TIMEOUT}s timeout budget",
+                    "items": []
+                }
             except Exception as e:
                 return {
                     "store_name": provider.store_name,
                     "store_icon": provider.store_icon,
+                    "elapsed_ms": round((time.time() - start_p) * 1000, 1),
                     "error": str(e),
                     "items": []
                 }

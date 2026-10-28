@@ -2,10 +2,16 @@ import re
 import urllib.parse
 from typing import List
 from bs4 import BeautifulSoup
+try:
+    from selectolax.parser import HTMLParser
+    HAS_SELECTOLAX = True
+except ImportError:
+    HAS_SELECTOLAX = False
 from curl_cffi import requests
 import asyncio
 from core.schema import StoreResult, StockLevel, ProductCategory
 from providers.base import BaseProvider
+from core.http_pool import get_shared_session
 
 class EmagProvider(BaseProvider):
     store_id = "emag_ro"
@@ -26,13 +32,79 @@ class EmagProvider(BaseProvider):
         }
 
         try:
-            with requests.Session(impersonate="chrome124") as s:
-                r = s.get(url, headers=headers, timeout=8)
-                if r.status_code != 200:
-                    return results
+            s = get_shared_session()
+            r = s.get(url, headers=headers, timeout=2.5)
+            if r.status_code != 200:
+                return results
 
-                soup = BeautifulSoup(r.text, "html.parser")
-                cards = soup.select(".card-item")
+            if HAS_SELECTOLAX:
+                tree = HTMLParser(r.text)
+                raw_cards = tree.css(".card-item")
+                for idx, card in enumerate(raw_cards[:24]):
+                    title_el = card.css_first(".card-v2-title")
+                    if not title_el:
+                        continue
+                    title = title_el.text(strip=True)
+
+                    price_el = card.css_first(".product-new-price")
+                    if not price_el:
+                        continue
+                    raw_price = price_el.text(strip=True)
+                    clean_price_str = re.sub(r"[^\d,\.]", "", raw_price).replace(".", "").replace(",", ".")
+                    try:
+                        price = float(clean_price_str)
+                    except ValueError:
+                        price = 0.0
+
+                    link_el = card.css_first("a[href]")
+                    product_url = link_el.attributes.get("href", url) if link_el else url
+                    if product_url.startswith("/"):
+                        product_url = "https://www.emag.ro" + product_url
+
+                    img_el = card.css_first("img")
+                    img_url = None
+                    if img_el:
+                        img_url = img_el.attributes.get("src") or img_el.attributes.get("data-src")
+
+                    btn = card.css_first("button[type=submit]") or card.css_first(".btn")
+                    btn_text = btn.text(strip=True).lower() if btn else ""
+                    in_stock = True
+                    stock_level = StockLevel.IN_STOCK
+                    stock_badge_text = "In Stock"
+
+                    if "adauga in cos" in btn_text or "precomanda" in btn_text:
+                        in_stock = True
+                        stock_level = StockLevel.IN_STOCK if "adauga" in btn_text else StockLevel.PREORDER
+                    elif "resigilat" in btn_text:
+                        in_stock = True
+                        stock_level = StockLevel.LOW_STOCK
+                        stock_badge_text = "Resealed"
+                    elif "indisponibil" in btn_text or "stoc epuizat" in btn_text:
+                        in_stock = False
+                        stock_level = StockLevel.OUT_OF_STOCK
+                        stock_badge_text = "Out of Stock"
+
+                    results.append(StoreResult(
+                        id=f"emag_{idx}_{hash(product_url) % 100000}",
+                        store_name=self.store_name,
+                        store_icon=self.store_icon,
+                        country_code=self.country_code,
+                        title=title,
+                        price=price,
+                        currency="RON",
+                        in_stock=in_stock,
+                        stock_level=stock_level,
+                        stock_badge_text=stock_badge_text,
+                        product_url=product_url,
+                        image_url=img_url,
+                        category=self.category,
+                        delivery_info="Delivery by eMAG / Genius"
+                    ))
+                return results
+
+            # Fallback to BeautifulSoup
+            soup = BeautifulSoup(r.text, "html.parser")
+            cards = soup.select(".card-item")
 
                 for idx, card in enumerate(cards[:24]):
                     title_el = card.select_one(".card-v2-title")

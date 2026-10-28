@@ -133,6 +133,11 @@ async fn main() {
         .await
         .expect("Failed to bind port");
 
+    let warmer_state = state.clone();
+    tokio::spawn(async move {
+        run_cache_warmer(warmer_state).await;
+    });
+
     axum::serve(listener, app).await.expect("Server error");
 }
 
@@ -591,5 +596,51 @@ fn resolve_product_image(query: &str, store_index: usize) -> &'static str {
             1 => "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80",
             _ => "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&auto=format&fit=crop&q=80",
         }
+    }
+}
+
+async fn run_cache_warmer(state: AppState) {
+    let popular_queries = [
+        "rtx 5090",
+        "rtx 4090",
+        "rtx 4070",
+        "iphone 16",
+        "iphone 15",
+        "playstation 5",
+        "ps5",
+        "macbook air",
+        "nintendo switch",
+    ];
+
+    let countries = ["RO", "DE", "GB", "US"];
+
+    // Allow services to fully boot before first background warm
+    tokio::time::sleep(Duration::from_secs(4)).await;
+
+    loop {
+        for country in &countries {
+            for q in &popular_queries {
+                let cache_key = format!("{}:{}", country, q);
+                let url = format!(
+                    "{}/api/search?q={}&country={}",
+                    state.python_worker_url,
+                    urlencoding(q),
+                    country
+                );
+
+                if let Ok(res) = state.http_client.get(&url).send().await {
+                    if res.status().is_success() {
+                        if let Ok(json_val) = res.json::<serde_json::Value>().await {
+                            let mut cache_write = state.cache.write().unwrap();
+                            cache_write.insert(cache_key, (Instant::now(), json_val));
+                        }
+                    }
+                }
+                tokio::time::sleep(Duration::from_millis(150)).await;
+            }
+        }
+
+        // Re-warm every 15 minutes
+        tokio::time::sleep(Duration::from_secs(900)).await;
     }
 }
