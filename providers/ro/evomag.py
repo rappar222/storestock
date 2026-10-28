@@ -6,6 +6,7 @@ from curl_cffi import requests
 import asyncio
 from core.schema import StoreResult, StockLevel, ProductCategory
 from providers.base import BaseProvider
+from core.http_pool import get_shared_session
 
 class EvoMagProvider(BaseProvider):
     store_id = "evomag_ro"
@@ -26,8 +27,8 @@ class EvoMagProvider(BaseProvider):
         }
 
         try:
-            with requests.Session(impersonate="chrome124") as s:
-                r = s.get(url, headers=headers, timeout=8)
+            s = get_shared_session()
+            r = s.get(url, headers=headers, timeout=2.0)
                 if r.status_code == 200:
                     soup = BeautifulSoup(r.text, "html.parser")
                     items = soup.select(".sn-product") or soup.select(".product_box") or soup.select(".npi_content")

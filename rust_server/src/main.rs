@@ -363,8 +363,74 @@ async fn stream_endpoint(
     Query(query): Query<SearchQuery>,
 ) -> Response {
     let country = query.country.clone().unwrap_or_else(|| "RO".to_string()).to_uppercase();
+    let cache_key = format!("{}:{}", country, query.q.trim().to_lowercase());
 
-    // 1. Try proxying to Python Scraper Worker (real live scrapers)
+    // 1. Sub-millisecond Rust RAM Cache Check (< 1ms)
+    {
+        let cache_read = state.cache.read().unwrap();
+        if let Some((inserted_at, cached_res)) = cache_read.get(&cache_key) {
+            if inserted_at.elapsed() < Duration::from_secs(900) {
+                let mut events = Vec::new();
+
+                let ai_intent = cached_res.get("ai_intent").cloned().unwrap_or_else(|| {
+                    serde_json::json!({
+                        "intent_type": "cached",
+                        "category_detected": "High-Performance Hardware & Flagship Tech",
+                        "intent_badge": "⚡ Instant Cached RAM Stream",
+                        "synonyms": [query.q.clone()]
+                    })
+                });
+                events.push(format!("data: {}\n\n", serde_json::to_string(&serde_json::json!({
+                    "type": "ai_intent",
+                    "payload": ai_intent
+                })).unwrap()));
+
+                if let Some(results) = cached_res.get("results").and_then(|r| r.as_array()) {
+                    let mut store_groups: HashMap<String, Vec<serde_json::Value>> = HashMap::new();
+                    for item in results {
+                        let store = item.get("store_name").and_then(|s| s.as_str()).unwrap_or("Store").to_string();
+                        store_groups.entry(store).or_default().push(item.clone());
+                    }
+
+                    for (store_name, items) in store_groups {
+                        let store_icon = items.first()
+                            .and_then(|it| it.get("store_icon"))
+                            .and_then(|i| i.as_str())
+                            .unwrap_or("shopping-bag");
+
+                        let provider_result = serde_json::json!({
+                            "type": "provider_result",
+                            "payload": {
+                                "store_name": store_name,
+                                "store_icon": store_icon,
+                                "elapsed_ms": 0.5,
+                                "items": items
+                            }
+                        });
+                        events.push(format!("data: {}\n\n", serde_json::to_string(&provider_result).unwrap()));
+                    }
+                }
+
+                events.push("data: {\"type\": \"done\"}\n\n".to_string());
+                let body = events.concat();
+                return (
+                    [
+                        (header::CONTENT_TYPE, "text/event-stream"),
+                        (header::CACHE_CONTROL, "no-cache"),
+                        (header::CONNECTION, "keep-alive"),
+                        (
+                            header::HeaderName::from_static("x-engine-gateway"),
+                            "Rust-Axum-RAM-Cache-Hit",
+                        ),
+                    ],
+                    body,
+                )
+                    .into_response();
+            }
+        }
+    }
+
+    // 2. Proxy to Python Scraper Worker (real live scrapers)
     let mut target_url = format!(
         "{}/api/stream?q={}&country={}",
         state.python_worker_url,
@@ -602,7 +668,12 @@ async fn run_cache_warmer(state: AppState) {
     let popular_queries = [
         "rtx 5090",
         "rtx 4090",
+        "rtx 4080",
         "rtx 4070",
+        "rtx 4060",
+        "rtx 3060",
+        "a6000",
+        "rtx a6000",
         "iphone 16",
         "iphone 15",
         "playstation 5",

@@ -292,6 +292,46 @@ class SearchEngine:
             AutoMarketProvider(code)
         ]
 
+    def get_providers_for_query(self, query: str, country_code: str) -> List[BaseProvider]:
+        code = country_code.upper()
+        all_for_country = self.providers.get(code, [])
+        if not all_for_country:
+            return self.get_providers_for_country(code)
+
+        ai_intent = analyze_user_intent(query)
+        detected = ai_intent.get("detected_intent", "GENERAL")
+        q_lower = query.lower()
+
+        # If car / automotive query
+        if detected == "VEHICLE":
+            return [
+                p for p in all_for_country
+                if p.category == ProductCategory.AUTOMOTIVE
+                or "auto" in p.store_id.lower()
+                or "proleasing" in p.store_id.lower()
+            ]
+
+        # If tech / hardware / gaming / electronics
+        is_tech = detected in ["STANDALONE_GPU", "TECH_HARDWARE"] or any(
+            t in q_lower for t in [
+                "rtx", "gtx", "gpu", "cpu", "intel", "amd", "ryzen", "nvidia", "a6000",
+                "laptop", "macbook", "iphone", "samsung", "ps5", "playstation", "xbox",
+                "switch", "nintendo", "pc", "monitor", "placa video", "procesor", "ram", "ssd",
+                "tastatura", "mouse", "casti", "televizor", "oled", "tv", "asus", "gigabyte", "msi"
+            ]
+        )
+        if is_tech:
+            # Query top tech specialists + flagship marketplace
+            tech_providers = [
+                p for p in all_for_country
+                if p.category in [ProductCategory.TECH_HARDWARE, ProductCategory.GENERAL]
+                and not any(x in p.store_id.lower() for x in ["auto", "proleasing", "dedeman", "hornbach", "leroy", "mega", "freshful", "sezamo", "kaufland", "bringo"])
+            ]
+            return tech_providers if tech_providers else all_for_country[:6]
+
+        # Default general query: prioritize top 6 general & specialized platforms
+        return all_for_country[:6]
+
     async def search_all(
         self,
         query: str,
@@ -316,12 +356,12 @@ class SearchEngine:
                     total_results=len(cached_results),
                     in_stock_count=in_stock,
                     execution_time_ms=round((time.time() - start_time) * 1000, 2),
-                    stores_searched=[p.store_name for p in self.get_providers_for_country(country_code)],
+                    stores_searched=[p.store_name for p in self.get_providers_for_query(query, country_code)],
                     ai_intent=cached_intent,
                     results=cached_results
                 )
 
-        providers = self.get_providers_for_country(country_code)
+        providers = self.get_providers_for_query(query, country_code)
         
         # Determine queries: primary query + top AI synonym if applicable
         synonyms = ai_intent.get("synonyms", [])
@@ -424,7 +464,7 @@ class SearchEngine:
         user_lon: Optional[float] = None
     ) -> AsyncGenerator[Dict, None]:
         country_code = country_code.upper()
-        providers = self.get_providers_for_country(country_code)
+        providers = self.get_providers_for_query(query, country_code)
         ai_intent = analyze_user_intent(query)
 
         # First yield the AI Intent detection payload to the UI
@@ -433,10 +473,31 @@ class SearchEngine:
             "payload": ai_intent
         }
 
+        # 1. High-speed cache check (< 1ms)
+        cache_key = f"{country_code}:{query.lower().strip()}"
+        if cache_key in self._cache:
+            cached_time, cached_results, cached_intent = self._cache[cache_key]
+            if time.time() - cached_time < self.cache_ttl:
+                store_items: Dict[str, list] = {}
+                for it in cached_results:
+                    store_items.setdefault(it.store_name, []).append(it)
+
+                for store_name, items in store_items.items():
+                    yield {
+                        "type": "provider_result",
+                        "payload": {
+                            "store_name": store_name,
+                            "store_icon": items[0].store_icon if items else "shopping-bag",
+                            "elapsed_ms": 0.5,
+                            "items": [r.model_dump() for r in items]
+                        }
+                    }
+                return
+
         synonyms = ai_intent.get("synonyms", [])
         alt_query = synonyms[0] if synonyms and synonyms[0].lower() != query.lower().strip() else None
 
-        STORE_STREAM_TIMEOUT = 1.15
+        STORE_STREAM_TIMEOUT = 0.85
 
         async def run_provider(provider: BaseProvider):
             start_p = time.time()
@@ -486,28 +547,38 @@ class SearchEngine:
                     "items": []
                 }
 
-        MAX_STREAM_BUDGET = 0.49  # Sub-500ms hard ceiling
-        stream_start = time.time()
-
+        MAX_STREAM_BUDGET = 0.50  # Hard 500ms ceiling
+        start_fanout = time.time()
         tasks = [asyncio.create_task(run_provider(p)) for p in providers]
+        cached_items_to_save: List[StoreResult] = []
 
-        for future in asyncio.as_completed(tasks):
-            elapsed = time.time() - stream_start
-            remaining = MAX_STREAM_BUDGET - elapsed
-            if remaining <= 0:
-                for t in tasks:
-                    if not t.done():
-                        t.cancel()
-                break
+        try:
+            for coro in asyncio.as_completed(tasks):
+                time_left = MAX_STREAM_BUDGET - (time.time() - start_fanout)
+                if time_left <= 0:
+                    break
+                try:
+                    res = await asyncio.wait_for(coro, timeout=time_left)
+                    if res:
+                        yield {
+                            "type": "provider_result",
+                            "payload": res
+                        }
+                        if res.get("items"):
+                            for it_data in res["items"]:
+                                try:
+                                    cached_items_to_save.append(StoreResult(**it_data))
+                                except Exception:
+                                    pass
+                except asyncio.TimeoutError:
+                    break
+                except Exception:
+                    pass
+        finally:
+            for t in tasks:
+                if not t.done():
+                    t.cancel()
 
-            try:
-                provider_result = await asyncio.wait_for(future, timeout=max(0.01, remaining))
-                yield {
-                    "type": "provider_result",
-                    "payload": provider_result
-                }
-            except asyncio.TimeoutError:
-                for t in tasks:
-                    if not t.done():
-                        t.cancel()
-                break
+        # Cache results in memory
+        if cached_items_to_save:
+            self._cache[cache_key] = (time.time(), cached_items_to_save, ai_intent)

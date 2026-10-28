@@ -6,6 +6,7 @@ from curl_cffi import requests
 import asyncio
 from core.schema import StoreResult, StockLevel, ProductCategory
 from providers.base import BaseProvider
+from core.http_pool import get_shared_session
 
 class FlancoProvider(BaseProvider):
     store_id = "flanco_ro"
@@ -26,10 +27,10 @@ class FlancoProvider(BaseProvider):
         }
 
         try:
-            with requests.Session(impersonate="chrome124") as s:
-                r = s.get(url, headers=headers, timeout=8)
-                if r.status_code != 200:
-                    return results
+            s = get_shared_session()
+            r = s.get(url, headers=headers, timeout=2.0)
+            if r.status_code != 200:
+                return results
 
                 soup = BeautifulSoup(r.text, "html.parser")
                 items = soup.select(".product-item")

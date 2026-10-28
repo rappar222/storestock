@@ -17,6 +17,13 @@ from core.schema import SearchResponse, RestockAlert
 
 app = FastAPI(title="StoreStock Core Engine", version="1.1.0")
 
+@app.on_event("startup")
+async def startup_event():
+    # Expand default thread pool to 32 workers to prevent WAN scraper starvation
+    from concurrent.futures import ThreadPoolExecutor
+    loop = asyncio.get_running_loop()
+    loop.set_default_executor(ThreadPoolExecutor(max_workers=32))
+
 # Enable CORS for external client/API testing
 app.add_middleware(
     CORSMiddleware,
