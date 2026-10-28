@@ -1,5 +1,6 @@
 import time
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, AsyncGenerator, Optional
 from core.schema import StoreResult, SearchResponse, StockLevel
 from core.countries import COUNTRIES_REGISTRY
@@ -349,8 +350,19 @@ class SearchEngine:
                 print(f"[SearchEngine] Store '{p.store_name}' error: {e}")
                 return []
 
-        tasks = [query_provider(p) for p in providers]
-        responses = await asyncio.gather(*tasks, return_exceptions=True)
+        MAX_SEARCH_BUDGET = 0.48
+
+        tasks = [asyncio.create_task(query_provider(p)) for p in providers]
+        done, pending = await asyncio.wait(tasks, timeout=MAX_SEARCH_BUDGET)
+        for t in pending:
+            t.cancel()
+
+        responses = []
+        for t in done:
+            try:
+                responses.append(t.result())
+            except Exception:
+                pass
 
         all_results: List[StoreResult] = []
         stores_searched: List[str] = []
@@ -474,11 +486,28 @@ class SearchEngine:
                     "items": []
                 }
 
+        MAX_STREAM_BUDGET = 0.49  # Sub-500ms hard ceiling
+        stream_start = time.time()
+
         tasks = [asyncio.create_task(run_provider(p)) for p in providers]
 
         for future in asyncio.as_completed(tasks):
-            provider_result = await future
-            yield {
-                "type": "provider_result",
-                "payload": provider_result
-            }
+            elapsed = time.time() - stream_start
+            remaining = MAX_STREAM_BUDGET - elapsed
+            if remaining <= 0:
+                for t in tasks:
+                    if not t.done():
+                        t.cancel()
+                break
+
+            try:
+                provider_result = await asyncio.wait_for(future, timeout=max(0.01, remaining))
+                yield {
+                    "type": "provider_result",
+                    "payload": provider_result
+                }
+            except asyncio.TimeoutError:
+                for t in tasks:
+                    if not t.done():
+                        t.cancel()
+                break

@@ -49,7 +49,7 @@ class AlibabaProvider(BaseProvider):
 
         try:
             with requests.Session(impersonate="chrome124") as s:
-                r = s.get(url, headers=headers, timeout=9)
+                r = s.get(url, headers=headers, timeout=1.5)
                 if r.status_code == 200:
                     soup = BeautifulSoup(r.text, "html.parser")
                     cards = soup.select("div.fy23-search-card, div.m-gallery-product-item, div[data-content='product'], div.list-no-v2-outer")

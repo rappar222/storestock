@@ -140,7 +140,7 @@ class AliExpressProvider(BaseProvider):
 
         try:
             with requests.Session(impersonate="chrome124") as s:
-                r = s.get(url, headers=headers, timeout=10)
+                r = s.get(url, headers=headers, timeout=1.5)
                 if r.status_code == 200:
                     results = self._parse_html(r.text, clean_query, url)
                 else:

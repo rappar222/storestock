@@ -53,7 +53,7 @@ class AmazonProvider(BaseProvider):
 
         try:
             with requests.Session(impersonate="chrome124") as s:
-                r = s.get(url, headers=headers, timeout=8)
+                r = s.get(url, headers=headers, timeout=1.5)
                 if r.status_code != 200:
                     return results
 
