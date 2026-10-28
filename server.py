@@ -161,22 +161,24 @@ async def submit_feedback(request: Request, payload: dict = Body(...)):
         print(f"[Feedback] Failed to save feedback locally: {e}")
 
     target_email = "feedback@polychroms.dev"
-    smtp_host = os.environ.get("SMTP_HOST", "").strip() or None
-    smtp_user = os.environ.get("SMTP_USER", "").strip() or None
-    smtp_pass = os.environ.get("SMTP_PASSWORD", "").replace(" ", "").strip() or None
-    smtp_port = int(os.environ.get("SMTP_PORT", "587").strip() or 587)
-    smtp_from = os.environ.get("SMTP_FROM", "").strip() or (smtp_user or "feedback-noreply@polychroms.dev")
+    smtp_host = os.environ.get("SMTP_HOST", "smtp.gmail.com").strip()
+    smtp_user = os.environ.get("SMTP_USER", "rappar2018@gmail.com").strip()
+    smtp_pass = os.environ.get("SMTP_PASSWORD", "pfklqccstismrxyy").replace(" ", "").strip()
+    smtp_port = int(str(os.environ.get("SMTP_PORT", 587)).strip())
+    smtp_from = os.environ.get("SMTP_FROM", "rappar2018@gmail.com").strip()
 
     email_sent = False
     delivery_note = ""
 
-    # Strategy A: If explicit SMTP server credentials are provided via environment variables
-    if smtp_host:
+    # Strategy A: Deliver via authenticated SMTP (Gmail TLS)
+    if smtp_host and smtp_user and smtp_pass:
         try:
             msg = EmailMessage()
             msg["Subject"] = f"[StoreStock {category}] {subject}"
             msg["From"] = smtp_from
-            msg["To"] = target_email
+            # Deliver to both feedback@polychroms.dev and your Gmail inbox directly
+            recipients = [target_email, "rappar2018@gmail.com"]
+            msg["To"] = ", ".join(recipients)
             if email:
                 msg["Reply-To"] = email
 
@@ -200,22 +202,26 @@ Message / Description:
 """
             msg.set_content(email_body)
 
+            import ssl
+            ssl_context = ssl.create_default_context()
+
             if smtp_port == 465:
-                with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=8) as server:
-                    if smtp_user and smtp_pass:
-                        server.login(smtp_user, smtp_pass)
+                with smtplib.SMTP_SSL(smtp_host, smtp_port, context=ssl_context, timeout=10) as server:
+                    server.login(smtp_user, smtp_pass)
                     server.send_message(msg)
             else:
-                with smtplib.SMTP(smtp_host, smtp_port, timeout=8) as server:
-                    if os.environ.get("SMTP_TLS", "true").lower() == "true":
-                        server.starttls()
-                    if smtp_user and smtp_pass:
-                        server.login(smtp_user, smtp_pass)
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+                    server.ehlo()
+                    server.starttls(context=ssl_context)
+                    server.ehlo()
+                    server.login(smtp_user, smtp_pass)
                     server.send_message(msg)
             email_sent = True
-            delivery_note = "Delivered via custom SMTP server."
+            delivery_note = "Delivered via Gmail SMTP directly to your inbox and feedback@polychroms.dev!"
+            print(f"[Feedback] Successfully sent feedback email via {smtp_host} to {recipients}")
         except Exception as e:
-            print(f"[Feedback] Custom SMTP failed ({e}), attempting HTTPS delivery fallback...")
+            print(f"[Feedback SMTP ERROR] {type(e).__name__}: {e}")
+            delivery_note = f"SMTP error: {e}"
 
     # Strategy B: Direct HTTPS FormSubmit API (bypasses ISP port 25 blocking and works out of the box)
     if not email_sent:

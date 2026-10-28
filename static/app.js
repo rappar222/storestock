@@ -2116,12 +2116,16 @@ if (feedbackForm) {
         })
       });
 
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         closeFeedbackModal();
         feedbackForm.reset();
-        showToast("Thank you! Feedback sent to feedback@polychroms.dev", "success");
+        if (data.email_dispatched) {
+          showToast(data.message || "Feedback sent to feedback@polychroms.dev!", "success");
+        } else {
+          showToast(data.note || "Feedback saved on server!", "warning");
+        }
       } else {
-        const data = await res.json().catch(() => ({}));
         showToast(data.detail || "Could not deliver feedback. Please try again.", "error");
       }
     } catch (err) {
