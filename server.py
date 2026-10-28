@@ -8,7 +8,7 @@ import base64
 from email.message import EmailMessage
 from typing import Optional
 from fastapi import FastAPI, Query, HTTPException, Body, Request, BackgroundTasks
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from core.engine import SearchEngine
@@ -50,6 +50,21 @@ async def detect_country_endpoint(request: Request):
         if val and val.upper() in COUNTRIES_REGISTRY:
             return {"country": val.upper(), "source": "cloudflare"}
     return {"country": "RO", "source": "default"}
+
+@app.get("/api/architecture/download")
+async def download_architecture_endpoint(password: str = Query(..., description="Access password")):
+    if password != "radu1234":
+        raise HTTPException(status_code=403, detail="Invalid password. Access denied.")
+    
+    svg_file = os.path.join(static_dir, "storestock_architecture.svg")
+    if not os.path.exists(svg_file):
+        raise HTTPException(status_code=404, detail="Architecture diagram not found on server.")
+        
+    return FileResponse(
+        path=svg_file,
+        filename="storestock_architecture.svg",
+        media_type="image/svg+xml"
+    )
 
 @app.get("/api/search", response_model=SearchResponse)
 async def search_endpoint(

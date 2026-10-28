@@ -1,424 +1,464 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1100" width="1600" height="1100" style="background:#0b0f19; font-family:'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="1600" height="1200" style="background-color:#070b14; font-family:ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
   <defs>
     <!-- Background Grid Pattern -->
-    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.8" stroke-opacity="0.4"/>
-      <circle cx="40" cy="40" r="1" fill="#334155" fill-opacity="0.6"/>
+    <pattern id="archGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#17223b" stroke-width="0.75" stroke-opacity="0.6"/>
+      <circle cx="40" cy="40" r="1.2" fill="#22365c" fill-opacity="0.8"/>
     </pattern>
 
     <!-- Gradients -->
-    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#10b981"/>
       <stop offset="50%" stop-color="#06b6d4"/>
-      <stop offset="100%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#6366f1"/>
     </linearGradient>
 
-    <linearGradient id="cardGradDark" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.9"/>
-      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95"/>
+    <linearGradient id="cardDarkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#111827" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#0b1120" stop-opacity="0.98"/>
     </linearGradient>
 
-    <linearGradient id="clientGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="accentCyan" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#06b6d4"/>
       <stop offset="100%" stop-color="#3b82f6"/>
     </linearGradient>
 
-    <linearGradient id="gatewayGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="accentEmerald" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#10b981"/>
       <stop offset="100%" stop-color="#059669"/>
     </linearGradient>
 
-    <linearGradient id="fanoutGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="accentPurple" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#8b5cf6"/>
       <stop offset="100%" stop-color="#6366f1"/>
     </linearGradient>
 
-    <linearGradient id="marketGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="accentAmber" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#f59e0b"/>
       <stop offset="100%" stop-color="#ea580c"/>
     </linearGradient>
 
     <!-- Arrow Markers -->
-    <marker id="arrowCyan" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
+    <marker id="arrowCyan" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
       <path d="M 0 0 L 8 4 L 0 8 Z" fill="#06b6d4"/>
     </marker>
-    <marker id="arrowEmerald" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
+    <marker id="arrowEmerald" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
       <path d="M 0 0 L 8 4 L 0 8 Z" fill="#10b981"/>
     </marker>
-    <marker id="arrowPurple" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
+    <marker id="arrowPurple" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
       <path d="M 0 0 L 8 4 L 0 8 Z" fill="#a78bfa"/>
     </marker>
-    <marker id="arrowAmber" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto">
+    <marker id="arrowAmber" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
       <path d="M 0 0 L 8 4 L 0 8 Z" fill="#f59e0b"/>
     </marker>
-
-    <!-- Glow Filter -->
-    <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="6" result="blur"/>
-      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-    </filter>
-    <filter id="glowEmerald" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="6" result="blur"/>
-      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-    </filter>
   </defs>
 
-  <!-- Background Grid -->
-  <rect width="1600" height="1100" fill="#0b0f19"/>
-  <rect width="1600" height="1100" fill="url(#grid)"/>
+  <!-- Background Base & Grid -->
+  <rect width="1600" height="1200" fill="#070b14"/>
+  <rect width="1600" height="1200" fill="url(#archGrid)"/>
 
-  <!-- ==================== TITLE & HEADER ==================== -->
-  <g transform="translate(60, 45)">
+  <!-- ==================== HEADER SECTION ==================== -->
+  <g transform="translate(60, 40)">
     <!-- Brand Icon -->
-    <rect x="0" y="0" width="48" height="48" rx="12" fill="url(#headerGrad)"/>
-    <path d="M 14 18 L 24 13 L 34 18 L 24 23 Z M 14 24 L 24 29 L 34 24 M 14 30 L 24 35 L 34 30" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="0" y="0" width="52" height="52" rx="14" fill="url(#primaryGrad)"/>
+    <path d="M 16 19 L 26 13 L 36 19 L 26 25 Z M 16 26 L 26 32 L 36 26 M 16 33 L 26 39 L 36 33" fill="none" stroke="#050811" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
     
-    <text x="64" y="32" fill="#fff" font-size="28" font-weight="800" letter-spacing="-0.5">StoreStock</text>
-    <text x="215" y="32" fill="url(#headerGrad)" font-size="28" font-weight="800">Architecture</text>
-    <rect x="390" y="14" width="105" height="24" rx="6" fill="#10b981" fill-opacity="0.15" stroke="#10b981" stroke-width="1"/>
-    <text x="442" y="30" fill="#34d399" font-size="12" font-weight="700" text-anchor="middle">v3.0 Production</text>
-    <text x="64" y="52" fill="#94a3b8" font-size="13" font-weight="500">Real-Time Multi-Store Inventory, Automotive Aggregation &amp; Geo-Spatial Routing Engine</text>
+    <text x="70" y="34" fill="#ffffff" font-size="30" font-weight="900" letter-spacing="-0.5">StoreStock</text>
+    <text x="240" y="34" fill="url(#primaryGrad)" font-size="30" font-weight="900">System Architecture</text>
+    
+    <rect x="560" y="14" width="130" height="26" rx="8" fill="#10b981" fill-opacity="0.15" stroke="#10b981" stroke-width="1.2"/>
+    <text x="625" y="31" fill="#34d399" font-size="12" font-weight="700" text-anchor="middle">v4.0 Global Multi-Store</text>
+    
+    <text x="70" y="56" fill="#94a3b8" font-size="13" font-weight="500">Real-Time Concurrent Multi-Country Scraping, TLS Impersonation &amp; Geolocation Routing Engine</text>
   </g>
 
-  <!-- Benchmark Badges (Right Header) -->
-  <g transform="translate(1120, 45)">
-    <rect x="0" y="0" width="420" height="52" rx="10" fill="#1e293b" fill-opacity="0.7" stroke="#334155" stroke-width="1"/>
-    <circle cx="28" cy="26" r="6" fill="#10b981"/>
-    <text x="44" y="23" fill="#e2e8f0" font-size="11" font-weight="700">Zero Headless Browsers</text>
-    <text x="44" y="38" fill="#64748b" font-size="10">Raw curl_cffi HTTP/2 &bull; TLS JA3/JA4</text>
-    <line x1="210" y1="10" x2="210" y2="42" stroke="#334155" stroke-width="1"/>
-    <circle cx="230" cy="26" r="6" fill="#06b6d4"/>
-    <text x="246" y="23" fill="#e2e8f0" font-size="11" font-weight="700">&lt; 1.8s Parallel Fan-Out</text>
-    <text x="246" y="38" fill="#64748b" font-size="10">asyncio.gather Concurrent Execution</text>
+  <!-- Top Metrics Badges -->
+  <g transform="translate(1080, 40)">
+    <rect x="0" y="0" width="460" height="56" rx="12" fill="#111827" fill-opacity="0.8" stroke="#1f2937" stroke-width="1.2"/>
+    <circle cx="28" cy="28" r="6" fill="#10b981"/>
+    <text x="44" y="24" fill="#f3f4f6" font-size="11.5" font-weight="700">Native AsyncIO Concurrency</text>
+    <text x="44" y="40" fill="#6b7280" font-size="10.5">FastAPI • Zero Headless Browser Bloat</text>
+    
+    <line x1="230" y1="12" x2="230" y2="44" stroke="#374151" stroke-width="1"/>
+    
+    <circle cx="254" cy="28" r="6" fill="#06b6d4"/>
+    <text x="270" y="24" fill="#f3f4f6" font-size="11.5" font-weight="700">24+ Country Connectors</text>
+    <text x="270" y="40" fill="#6b7280" font-size="10.5">curl_cffi Chrome JA3 • &lt; 2s Fan-Out</text>
   </g>
 
-  <!-- ==================== 1. CLIENT & EDGE INGESTION LAYER ==================== -->
-  <g transform="translate(60, 130)">
-    <!-- Container Box -->
-    <rect x="0" y="0" width="340" height="390" rx="16" fill="url(#cardGradDark)" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="6 3"/>
+  <!-- ==================== LAYER 1: CLIENT & EDGE INGESTION ==================== -->
+  <g transform="translate(60, 125)">
+    <!-- Container -->
+    <rect x="0" y="0" width="340" height="420" rx="16" fill="url(#cardDarkGrad)" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="6 3"/>
     
-    <!-- Header -->
+    <!-- Title -->
     <rect x="18" y="16" width="304" height="36" rx="8" fill="#06b6d4" fill-opacity="0.15"/>
     <circle cx="36" cy="34" r="5" fill="#06b6d4"/>
-    <text x="52" y="39" fill="#38bdf8" font-size="13" font-weight="700">1. Client &amp; Edge Ingestion</text>
+    <text x="50" y="38" fill="#38bdf8" font-size="13" font-weight="800">1. Client &amp; Edge Ingestion Layer</text>
 
-    <!-- Browser Client Card -->
+    <!-- Subcard 1: Single Page App UI -->
     <g transform="translate(20, 68)">
-      <rect x="0" y="0" width="300" height="90" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="16" y="25" fill="#f8fafc" font-size="13" font-weight="700">Responsive Web App</text>
-      <text x="16" y="44" fill="#94a3b8" font-size="11">Tailwind CSS &bull; Vanilla JS &bull; Leaflet OSM</text>
-      <rect x="16" y="58" width="70" height="20" rx="4" fill="#3b82f6" fill-opacity="0.2"/>
-      <text x="51" y="72" fill="#60a5fa" font-size="10" font-weight="600" text-anchor="middle">Grid / Map</text>
-      <rect x="94" y="58" width="85" height="20" rx="4" fill="#10b981" fill-opacity="0.2"/>
-      <text x="136" y="72" fill="#34d399" font-size="10" font-weight="600" text-anchor="middle">Live Filters</text>
-      <rect x="187" y="58" width="95" height="20" rx="4" fill="#f59e0b" fill-opacity="0.2"/>
-      <text x="234" y="72" fill="#fbbf24" font-size="10" font-weight="600" text-anchor="middle">Restock Alerts</text>
+      <rect x="0" y="0" width="300" height="100" rx="10" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+      <text x="16" y="24" fill="#f8fafc" font-size="13" font-weight="700">Responsive Tailwind UI</text>
+      <text x="16" y="42" fill="#94a3b8" font-size="11">Real-time reactive DOM with zero framework lag</text>
+      <g transform="translate(16, 56)">
+        <rect x="0" y="0" width="80" height="22" rx="5" fill="#06b6d4" fill-opacity="0.18"/>
+        <text x="40" y="15" fill="#38bdf8" font-size="10" font-weight="700" text-anchor="middle">Cards Grid</text>
+
+        <rect x="88" y="0" width="86" height="22" rx="5" fill="#10b981" fill-opacity="0.18"/>
+        <text x="131" y="15" fill="#34d399" font-size="10" font-weight="700" text-anchor="middle">Leaflet Map</text>
+
+        <rect x="182" y="0" width="86" height="22" rx="5" fill="#f59e0b" fill-opacity="0.18"/>
+        <text x="225" y="15" fill="#fbbf24" font-size="10" font-weight="700" text-anchor="middle">Restock Alerts</text>
+      </g>
     </g>
 
-    <!-- Cloudflare Edge & Geolocation -->
-    <g transform="translate(20, 172)">
-      <rect x="0" y="0" width="300" height="96" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="16" y="24" fill="#f8fafc" font-size="12" font-weight="700">Cloudflare Edge &amp; VPN Sync</text>
-      <text x="16" y="42" fill="#94a3b8" font-size="10.5">Origin /cdn-cgi/trace country detection</text>
-      <text x="16" y="58" fill="#94a3b8" font-size="10.5">Zero ad-block interference &bull; VPN exit match</text>
-      <rect x="16" y="68" width="268" height="20" rx="4" fill="#06b6d4" fill-opacity="0.15"/>
-      <text x="150" y="82" fill="#38bdf8" font-size="10" font-weight="600" text-anchor="middle">49-Country Auto-Switching Registry</text>
+    <!-- Subcard 2: Cloudflare Edge Geolocation -->
+    <g transform="translate(20, 182)">
+      <rect x="0" y="0" width="300" height="106" rx="10" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+      <text x="16" y="24" fill="#f8fafc" font-size="12.5" font-weight="700">Cloudflare Edge &amp; Geo-Trace</text>
+      <text x="16" y="42" fill="#94a3b8" font-size="11">Zero-cost client origin trace (/cdn-cgi/trace)</text>
+      <text x="16" y="58" fill="#94a3b8" font-size="11">Auto-detects country, currency &amp; closest major city</text>
+      <rect x="16" y="72" width="268" height="22" rx="5" fill="#3b82f6" fill-opacity="0.15"/>
+      <text x="150" y="87" fill="#60a5fa" font-size="10.5" font-weight="700" text-anchor="middle">49-Country ISO Smart Dispatch</text>
     </g>
 
-    <!-- Hardware Geolocation Fallback -->
-    <g transform="translate(20, 282)">
-      <rect x="0" y="0" width="300" height="92" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="16" y="24" fill="#f8fafc" font-size="12" font-weight="700">Location Ingestion &amp; No-GPS Guard</text>
-      <text x="16" y="42" fill="#94a3b8" font-size="10.5">navigator.geolocation (maximumAge: 0)</text>
-      <text x="16" y="58" fill="#94a3b8" font-size="10.5">Graceful Laptop / Desktop Fallback Modal</text>
-      <text x="16" y="76" fill="#a78bfa" font-size="10" font-weight="600">Cross-Country Smart City Autocomplete</text>
+    <!-- Subcard 3: EventSource Stream Consumer -->
+    <g transform="translate(20, 302)">
+      <rect x="0" y="0" width="300" height="98" rx="10" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+      <text x="16" y="24" fill="#f8fafc" font-size="12.5" font-weight="700">SSE Live Stream Ingestion</text>
+      <text x="16" y="42" fill="#94a3b8" font-size="11">Progressive store pills render as results arrive</text>
+      <text x="16" y="58" fill="#94a3b8" font-size="11">🔴 0 Found • 🟡 Online Stock • 🟢 On Shelf</text>
+      <rect x="16" y="70" width="268" height="20" rx="4" fill="#10b981" fill-opacity="0.15"/>
+      <text x="150" y="84" fill="#34d399" font-size="10.5" font-weight="700" text-anchor="middle">Sub-50ms Real-Time Dom Appends</text>
     </g>
   </g>
 
-  <!-- Arrow: Client -> Gateway -->
-  <path d="M 400 325 L 470 325" fill="none" stroke="#06b6d4" stroke-width="2.5" stroke-dasharray="5 3" marker-end="url(#arrowCyan)"/>
-  <rect x="408" y="295" width="55" height="20" rx="4" fill="#0f172a" stroke="#06b6d4" stroke-width="0.8"/>
-  <text x="435" y="309" fill="#38bdf8" font-size="10" font-weight="700" text-anchor="middle">JSON / LatLng</text>
+  <!-- Arrow 1 -> 2 -->
+  <path d="M 400 335 L 470 335" fill="none" stroke="#06b6d4" stroke-width="2.5" stroke-dasharray="5 3" marker-end="url(#arrowCyan)"/>
+  <rect x="408" y="305" width="55" height="20" rx="4" fill="#0f172a" stroke="#06b6d4" stroke-width="0.8"/>
+  <text x="435" y="319" fill="#38bdf8" font-size="10" font-weight="700" text-anchor="middle">SSE / LatLng</text>
 
-  <!-- ==================== 2. FASTAPI GATEWAY & ENGINE ==================== -->
-  <g transform="translate(480, 130)">
-    <!-- Container Box -->
-    <rect x="0" y="0" width="350" height="390" rx="16" fill="url(#cardGradDark)" stroke="#10b981" stroke-width="1.5"/>
+  <!-- ==================== LAYER 2: FASTAPI GATEWAY ==================== -->
+  <g transform="translate(480, 125)">
+    <!-- Container -->
+    <rect x="0" y="0" width="350" height="420" rx="16" fill="url(#cardDarkGrad)" stroke="#10b981" stroke-width="1.5"/>
 
-    <!-- Header -->
+    <!-- Title -->
     <rect x="18" y="16" width="314" height="36" rx="8" fill="#10b981" fill-opacity="0.15"/>
     <circle cx="36" cy="34" r="5" fill="#10b981"/>
-    <text x="52" y="39" fill="#34d399" font-size="13" font-weight="700">2. FastAPI Gateway &amp; Dispatcher</text>
+    <text x="50" y="38" fill="#34d399" font-size="13" font-weight="800">2. FastAPI Gateway &amp; Engine Core</text>
 
-    <!-- Route Controller -->
+    <!-- Subcard 1: Intent & AI Disambiguation -->
     <g transform="translate(20, 68)">
-      <rect x="0" y="0" width="310" height="88" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="16" y="24" fill="#f8fafc" font-size="12" font-weight="700">Query Analyzer &amp; Category Router</text>
-      <text x="16" y="42" fill="#94a3b8" font-size="10.5">Detects Car Queries vs. Consumer Hardware</text>
-      <rect x="16" y="54" width="130" height="22" rx="4" fill="#ef4444" fill-opacity="0.15"/>
-      <text x="81" y="69" fill="#f87171" font-size="10" font-weight="600" text-anchor="middle">Automotive Query Mode</text>
-      <rect x="154" y="54" width="140" height="22" rx="4" fill="#3b82f6" fill-opacity="0.15"/>
-      <text x="224" y="69" fill="#60a5fa" font-size="10" font-weight="600" text-anchor="middle">Retail &amp; Tech Mode</text>
+      <rect x="0" y="0" width="310" height="100" rx="10" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+      <text x="16" y="24" fill="#f8fafc" font-size="12.5" font-weight="700">Semantic AI Intent Analyzer</text>
+      <text x="16" y="42" fill="#94a3b8" font-size="11">Filters prebuilt server racks vs. standalone GPUs</text>
+      <g transform="translate(16, 56)">
+        <rect x="0" y="0" width="130" height="24" rx="5" fill="#ef4444" fill-opacity="0.18"/>
+        <text x="65" y="16" fill="#f87171" font-size="10.5" font-weight="700" text-anchor="middle">Automotive Routing</text>
+
+        <rect x="140" y="0" width="138" height="24" rx="5" fill="#3b82f6" fill-opacity="0.18"/>
+        <text x="209" y="16" fill="#60a5fa" font-size="10.5" font-weight="700" text-anchor="middle">Hardware / Tech Match</text>
+      </g>
     </g>
 
-    <!-- Concurrency Orchestrator -->
-    <g transform="translate(20, 170)">
-      <rect x="0" y="0" width="310" height="94" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="16" y="24" fill="#f8fafc" font-size="12" font-weight="700">asyncio.gather Concurrency Core</text>
-      <text x="16" y="42" fill="#94a3b8" font-size="10.5">Parallel fan-out across 12+ providers simultaneously</text>
-      <text x="16" y="58" fill="#94a3b8" font-size="10.5">Sub-millisecond dispatch loop on Event Loop</text>
-      <rect x="16" y="68" width="278" height="18" rx="4" fill="#10b981" fill-opacity="0.15"/>
-      <text x="155" y="81" fill="#34d399" font-size="10" font-weight="600" text-anchor="middle">Non-blocking executor pools (run_in_executor)</text>
+    <!-- Subcard 2: Async Orchestration -->
+    <g transform="translate(20, 182)">
+      <rect x="0" y="0" width="310" height="106" rx="10" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+      <text x="16" y="24" fill="#f8fafc" font-size="12.5" font-weight="700">asyncio.gather Parallel Dispatch</text>
+      <text x="16" y="42" fill="#94a3b8" font-size="11">Fires all country retail connectors concurrently</text>
+      <text x="16" y="58" fill="#94a3b8" font-size="11">5-minute LRU memory cache per query &amp; country</text>
+      <rect x="16" y="72" width="278" height="22" rx="5" fill="#10b981" fill-opacity="0.18"/>
+      <text x="155" y="87" fill="#34d399" font-size="10.5" font-weight="700" text-anchor="middle">Non-blocking ThreadPoolExecutor Workers</text>
     </g>
 
-    <!-- Haversine Math Engine -->
-    <g transform="translate(20, 278)">
-      <rect x="0" y="0" width="310" height="96" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="16" y="24" fill="#f8fafc" font-size="12" font-weight="700">Haversine Geo-Spatial Math (0.0001s)</text>
-      <text x="16" y="42" fill="#94a3b8" font-size="10.5">Great-circle spherical distance on CPU</text>
-      <text x="16" y="58" fill="#94a3b8" font-size="10.5">Matches user coords against physical showroom GPS</text>
-      <text x="16" y="74" fill="#fbbf24" font-size="10" font-weight="600">&bull; No external Google Maps API lag or cost</text>
+    <!-- Subcard 3: Haversine Geo Routing -->
+    <g transform="translate(20, 302)">
+      <rect x="0" y="0" width="310" height="98" rx="10" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+      <text x="16" y="24" fill="#f8fafc" font-size="12.5" font-weight="700">Pure-Python Haversine Engine</text>
+      <text x="16" y="42" fill="#94a3b8" font-size="11">Spherical distance from user coordinates to stores</text>
+      <text x="16" y="58" fill="#94a3b8" font-size="11">• 0.0001s computation • Zero external API bills</text>
+      <rect x="16" y="70" width="278" height="20" rx="4" fill="#f59e0b" fill-opacity="0.18"/>
+      <text x="155" y="84" fill="#fbbf24" font-size="10.5" font-weight="700" text-anchor="middle">Instant Branch Distance Calculation</text>
     </g>
   </g>
 
-  <!-- Arrow: Gateway -> Fan-Out Bus -->
-  <path d="M 830 325 L 890 325" fill="none" stroke="#10b981" stroke-width="2.5" marker-end="url(#arrowEmerald)"/>
-  <rect x="836" y="295" width="50" height="20" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="0.8"/>
-  <text x="861" y="309" fill="#34d399" font-size="10" font-weight="700" text-anchor="middle">Fan-Out</text>
+  <!-- Arrow 2 -> 3 -->
+  <path d="M 830 335 L 890 335" fill="none" stroke="#10b981" stroke-width="2.5" marker-end="url(#arrowEmerald)"/>
+  <rect x="836" y="305" width="50" height="20" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="0.8"/>
+  <text x="861" y="319" fill="#34d399" font-size="10" font-weight="700" text-anchor="middle">Fan-Out</text>
 
-  <!-- ==================== 3. ASYNC CONNECTOR BUS & TLS ENGINE ==================== -->
-  <g transform="translate(900, 130)">
-    <!-- Container Box -->
-    <rect x="0" y="0" width="640" height="390" rx="16" fill="url(#cardGradDark)" stroke="#8b5cf6" stroke-width="1.5"/>
+  <!-- ==================== LAYER 3: HIGH-SPEED NETWORKING & STATE EXTRACTION ==================== -->
+  <g transform="translate(900, 125)">
+    <!-- Container -->
+    <rect x="0" y="0" width="640" height="420" rx="16" fill="url(#cardDarkGrad)" stroke="#8b5cf6" stroke-width="1.5"/>
 
-    <!-- Header -->
+    <!-- Title -->
     <rect x="18" y="16" width="604" height="36" rx="8" fill="#8b5cf6" fill-opacity="0.15"/>
     <circle cx="36" cy="34" r="5" fill="#8b5cf6"/>
-    <text x="52" y="39" fill="#c084fc" font-size="13" font-weight="700">3. High-Speed TLS Networking &amp; State Extraction Engine</text>
+    <text x="50" y="38" fill="#c084fc" font-size="13" font-weight="800">3. High-Speed TLS Networking &amp; State Extraction Engine</text>
 
-    <!-- Left Subcard: curl_cffi Engine -->
+    <!-- Subcard Left: curl_cffi Impersonator -->
     <g transform="translate(20, 68)">
-      <rect x="0" y="0" width="290" height="306" rx="12" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="16" y="26" fill="#f8fafc" font-size="13" font-weight="700">curl_cffi Impersonator</text>
-      <text x="16" y="44" fill="#a78bfa" font-size="11" font-weight="600">impersonate="chrome124"</text>
+      <rect x="0" y="0" width="290" height="332" rx="12" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+      <text x="16" y="26" fill="#f8fafc" font-size="13.5" font-weight="700">curl_cffi Impersonator</text>
+      <text x="16" y="44" fill="#a78bfa" font-size="11" font-weight="700">impersonate="chrome124"</text>
       
-      <g transform="translate(16, 62)">
-        <circle cx="6" cy="6" r="3" fill="#10b981"/>
-        <text x="18" y="10" fill="#cbd5e1" font-size="11">HTTP/2 Binary Framing &amp; ALPN</text>
+      <g transform="translate(16, 64)">
+        <circle cx="6" cy="8" r="3.5" fill="#10b981"/>
+        <text x="18" y="12" fill="#cbd5e1" font-size="11.5">HTTP/2 Binary Framing &amp; ALPN</text>
         
-        <circle cx="6" cy="32" r="3" fill="#10b981"/>
-        <text x="18" y="36" fill="#cbd5e1" font-size="11">JA3/JA4 TLS Ciphers &amp; Handshake</text>
+        <circle cx="6" cy="34" r="3.5" fill="#10b981"/>
+        <text x="18" y="38" fill="#cbd5e1" font-size="11.5">JA3/JA4 Real Chrome Fingerprints</text>
 
-        <circle cx="6" cy="58" r="3" fill="#10b981"/>
-        <text x="18" y="62" fill="#cbd5e1" font-size="11">Zero Headless Chromium Memory</text>
+        <circle cx="6" cy="60" r="3.5" fill="#10b981"/>
+        <text x="18" y="64" fill="#cbd5e1" font-size="11.5">Zero Headless Chromium Overhead</text>
 
-        <circle cx="6" cy="84" r="3" fill="#10b981"/>
-        <text x="18" y="88" fill="#cbd5e1" font-size="11">Bypasses Cloudflare / Akamai WAF</text>
+        <circle cx="6" cy="86" r="3.5" fill="#10b981"/>
+        <text x="18" y="90" fill="#cbd5e1" font-size="11.5">Bypasses Cloudflare / Akamai WAF</text>
       </g>
 
-      <rect x="16" y="176" width="258" height="114" rx="8" fill="#1e1b4b" stroke="#6366f1" stroke-width="0.8"/>
-      <text x="28" y="198" fill="#a5b4fc" font-size="11" font-weight="700">Resource Footprint Comparison</text>
-      <text x="28" y="218" fill="#94a3b8" font-size="10.5">Puppeteer / Selenium: <tspan fill="#f87171" font-weight="700">~800MB RAM / 12s</tspan></text>
-      <text x="28" y="238" fill="#94a3b8" font-size="10.5">curl_cffi Engine: <tspan fill="#34d399" font-weight="700">~15MB RAM / 0.25s</tspan></text>
-      <text x="28" y="262" fill="#38bdf8" font-size="10" font-weight="600">Speedup Factor: ~40x to 50x Faster</text>
+      <rect x="16" y="184" width="258" height="130" rx="8" fill="#1e1b4b" fill-opacity="0.8" stroke="#6366f1" stroke-width="1"/>
+      <text x="26" y="208" fill="#a5b4fc" font-size="11.5" font-weight="800">Resource Footprint Benchmarks</text>
+      <text x="26" y="230" fill="#94a3b8" font-size="11">Selenium / Puppeteer: <tspan fill="#f87171" font-weight="700">~800MB RAM / 10s</tspan></text>
+      <text x="26" y="252" fill="#94a3b8" font-size="11">curl_cffi C-Engine: <tspan fill="#34d399" font-weight="700">~15MB RAM / 0.25s</tspan></text>
+      <rect x="26" y="268" width="238" height="30" rx="6" fill="#10b981" fill-opacity="0.2"/>
+      <text x="145" y="287" fill="#34d399" font-size="11" font-weight="800" text-anchor="middle">&gt; 40x Speedup • 98% Less Memory</text>
     </g>
 
-    <!-- Right Subcard: State Hydration Parsing -->
+    <!-- Subcard Right: Hydration State Extraction -->
     <g transform="translate(330, 68)">
-      <rect x="0" y="0" width="290" height="306" rx="12" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="16" y="26" fill="#f8fafc" font-size="13" font-weight="700">Hydration State Extraction</text>
-      <text x="16" y="44" fill="#38bdf8" font-size="11" font-weight="600">In-Memory JSON Deserialization</text>
+      <rect x="0" y="0" width="290" height="332" rx="12" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+      <text x="16" y="26" fill="#f8fafc" font-size="13.5" font-weight="700">Hydration State Extraction</text>
+      <text x="16" y="44" fill="#38bdf8" font-size="11" font-weight="700">In-Memory JSON Deserialization</text>
 
       <g transform="translate(16, 62)">
-        <rect x="0" y="0" width="258" height="38" rx="6" fill="#1e293b"/>
-        <text x="10" y="18" fill="#f8fafc" font-size="10.5" font-weight="700">Next.js &amp; Nuxt __NEXT_DATA__</text>
-        <text x="10" y="30" fill="#94a3b8" font-size="9.5">Altex, Media Galaxy, PC Garage</text>
+        <rect x="0" y="0" width="258" height="44" rx="6" fill="#111827"/>
+        <text x="12" y="20" fill="#f8fafc" font-size="11" font-weight="700">Next.js __NEXT_DATA__ SSR</text>
+        <text x="12" y="34" fill="#94a3b8" font-size="10">Altex, Media Galaxy, PC Garage, Best Buy</text>
 
-        <rect x="0" y="48" width="258" height="38" rx="6" fill="#1e293b"/>
-        <text x="10" y="66" fill="#f8fafc" font-size="10.5" font-weight="700">Brace-Balanced State Parser</text>
-        <text x="10" y="78" fill="#94a3b8" font-size="9.5">Temu rawData, __INITIAL_STATE__</text>
+        <rect x="0" y="54" width="258" height="44" rx="6" fill="#111827"/>
+        <text x="12" y="74" fill="#f8fafc" font-size="11" font-weight="700">Balanced-Brace JSON Parser</text>
+        <text x="12" y="88" fill="#94a3b8" font-size="10">AliExpress window._init_data_, Temu state</text>
 
-        <rect x="0" y="96" width="258" height="38" rx="6" fill="#1e293b"/>
-        <text x="10" y="114" fill="#f8fafc" font-size="10.5" font-weight="700">Schema.org JSON-LD (ItemList)</text>
-        <text x="10" y="126" fill="#94a3b8" font-size="9.5">Direct Product Schema deserialization</text>
+        <rect x="0" y="108" width="258" height="44" rx="6" fill="#111827"/>
+        <text x="12" y="128" fill="#f8fafc" font-size="11" font-weight="700">Schema.org JSON-LD ItemList</text>
+        <text x="12" y="142" fill="#94a3b8" font-size="10">Direct embedded product semantic markup</text>
 
-        <rect x="0" y="144" width="258" height="38" rx="6" fill="#1e293b"/>
-        <text x="10" y="162" fill="#f8fafc" font-size="10.5" font-weight="700">DOM Class Resilience Fallback</text>
-        <text x="10" y="174" fill="#94a3b8" font-size="9.5">BeautifulSoup a[aria-label] fallback</text>
+        <rect x="0" y="162" width="258" height="44" rx="6" fill="#111827"/>
+        <text x="12" y="182" fill="#f8fafc" font-size="11" font-weight="700">Resilient DOM Fallbacks</text>
+        <text x="12" y="196" fill="#94a3b8" font-size="10">BeautifulSoup selector cascading</text>
       </g>
 
-      <rect x="16" y="254" width="258" height="36" rx="6" fill="#065f46" fill-opacity="0.3" stroke="#059669" stroke-width="0.8"/>
-      <text x="145" y="276" fill="#34d399" font-size="11" font-weight="700" text-anchor="middle">&lt; 2ms In-Memory Extraction</text>
+      <rect x="16" y="278" width="258" height="38" rx="6" fill="#065f46" fill-opacity="0.35" stroke="#059669" stroke-width="1"/>
+      <text x="145" y="302" fill="#34d399" font-size="11.5" font-weight="800" text-anchor="middle">&lt; 2ms In-Memory Extraction Speed</text>
     </g>
   </g>
 
-  <!-- Downward Connectors: Step 3 -> Step 4 (Multi-Provider Registry) -->
-  <path d="M 1220 520 L 1220 575 L 800 575 L 800 600" fill="none" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrowPurple)"/>
-  <rect x="735" y="563" width="130" height="24" rx="6" fill="#0f172a" stroke="#a78bfa" stroke-width="1"/>
+  <!-- Downward Connector: Layer 3 -> Layer 4 -->
+  <path d="M 1220 545 L 1220 575 L 800 575 L 800 600" fill="none" stroke="#a78bfa" stroke-width="2" marker-end="url(#arrowPurple)"/>
+  <rect x="735" y="563" width="130" height="24" rx="6" fill="#070b14" stroke="#a78bfa" stroke-width="1"/>
   <text x="800" y="579" fill="#c084fc" font-size="11" font-weight="700" text-anchor="middle">Asynchronous Dispatch</text>
 
-  <!-- ==================== 4. MULTI-PROVIDER PLATFORM TARGETS ==================== -->
-  <g transform="translate(60, 610)">
-    <!-- Container Box -->
-    <rect x="0" y="0" width="1480" height="250" rx="16" fill="url(#cardGradDark)" stroke="#f59e0b" stroke-width="1.5"/>
+  <!-- ==================== LAYER 4: MULTI-PROVIDER PLATFORM TARGETS ==================== -->
+  <g transform="translate(60, 605)">
+    <!-- Container -->
+    <rect x="0" y="0" width="1480" height="310" rx="16" fill="url(#cardDarkGrad)" stroke="#f59e0b" stroke-width="1.5"/>
 
-    <!-- Header -->
+    <!-- Title -->
     <rect x="18" y="16" width="1444" height="36" rx="8" fill="#f59e0b" fill-opacity="0.15"/>
     <circle cx="36" cy="34" r="5" fill="#f59e0b"/>
-    <text x="52" y="39" fill="#fbbf24" font-size="13" font-weight="700">4. Live Platform Providers (Regional Champions, Global Marketplaces, Dealerships &amp; Wholesale)</text>
+    <text x="50" y="38" fill="#fbbf24" font-size="13" font-weight="800">4. Live Platform Providers: 24+ Dedicated National Markets, Global Platforms &amp; Dealerships</text>
 
-    <!-- Column 1: Romania Regional Champions -->
+    <!-- Column 1: Romania & Eastern Europe Flagships -->
     <g transform="translate(20, 66)">
-      <rect x="0" y="0" width="340" height="166" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="16" y="24" fill="#f8fafc" font-size="12" font-weight="700">Romania Regional Champions</text>
-      <text x="16" y="40" fill="#94a3b8" font-size="10.5">National stock, physical store pickup &amp; delivery</text>
+      <rect x="0" y="0" width="340" height="225" rx="10" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+      <text x="16" y="24" fill="#f8fafc" font-size="12.5" font-weight="700">🇷🇴 Romania Domestic Retailers</text>
+      <text x="16" y="40" fill="#94a3b8" font-size="10.5">National walk-in shelf stock &amp; easybox delivery</text>
 
-      <g transform="translate(16, 54)">
-        <rect x="0" y="0" width="145" height="46" rx="6" fill="#1e293b"/>
+      <g transform="translate(16, 52)">
+        <rect x="0" y="0" width="145" height="48" rx="6" fill="#111827"/>
         <text x="10" y="20" fill="#38bdf8" font-size="11" font-weight="700">eMAG (RO)</text>
-        <text x="10" y="34" fill="#94a3b8" font-size="9.5">GraphQL + Search Feed</text>
+        <text x="10" y="34" fill="#94a3b8" font-size="9.5">Catalog + Stock Feed</text>
 
-        <rect x="155" y="0" width="145" height="46" rx="6" fill="#1e293b"/>
+        <rect x="155" y="0" width="145" height="48" rx="6" fill="#111827"/>
         <text x="165" y="20" fill="#f59e0b" font-size="11" font-weight="700">Altex &amp; Media Galaxy</text>
-        <text x="165" y="34" fill="#94a3b8" font-size="9.5">Catalog NEXT_DATA API</text>
+        <text x="165" y="34" fill="#94a3b8" font-size="9.5">NEXT_DATA Stock API</text>
 
-        <rect x="0" y="54" width="145" height="46" rx="6" fill="#1e293b"/>
-        <text x="10" y="74" fill="#34d399" font-size="11" font-weight="700">PC Garage</text>
-        <text x="10" y="88" fill="#94a3b8" font-size="9.5">Hardware &amp; Shelf Stock</text>
+        <rect x="0" y="56" width="145" height="48" rx="6" fill="#111827"/>
+        <text x="10" y="76" fill="#34d399" font-size="11" font-weight="700">PC Garage</text>
+        <text x="10" y="90" fill="#94a3b8" font-size="9.5">Hardware &amp; Warehouse</text>
 
-        <rect x="155" y="54" width="145" height="46" rx="6" fill="#1e293b"/>
-        <text x="165" y="74" fill="#38bdf8" font-size="11" font-weight="700">Flanco Retail</text>
-        <text x="165" y="88" fill="#94a3b8" font-size="9.5">Electronics &amp; Appliances</text>
+        <rect x="155" y="56" width="145" height="48" rx="6" fill="#111827"/>
+        <text x="165" y="76" fill="#38bdf8" font-size="11" font-weight="700">Flanco &amp; Auchan</text>
+        <text x="165" y="90" fill="#94a3b8" font-size="9.5">Retail Chains</text>
+
+        <rect x="0" y="112" width="300" height="44" rx="6" fill="#111827"/>
+        <text x="12" y="130" fill="#60a5fa" font-size="11" font-weight="700">Proleasing Motors (Certified)</text>
+        <text x="12" y="144" fill="#94a3b8" font-size="9.5">BMW Premium Selection &amp; Ford Stock (Ploiești/Buzău)</text>
       </g>
     </g>
 
-    <!-- Column 2: Automotive Certified Dealerships -->
+    <!-- Column 2: Western & Central Europe Flagships -->
     <g transform="translate(380, 66)">
-      <rect x="0" y="0" width="340" height="166" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="16" y="24" fill="#f8fafc" font-size="12" font-weight="700">Automotive &amp; Car Dealerships</text>
-      <text x="16" y="40" fill="#94a3b8" font-size="10.5">Verified showroom vehicles with mileage &amp; year</text>
+      <rect x="0" y="0" width="345" height="225" rx="10" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+      <text x="16" y="24" fill="#f8fafc" font-size="12.5" font-weight="700">🇪🇺 Germany, UK, France &amp; Italy</text>
+      <text x="16" y="40" fill="#94a3b8" font-size="10.5">Top-tier European hardware &amp; electronics chains</text>
 
-      <g transform="translate(16, 54)">
-        <rect x="0" y="0" width="300" height="46" rx="6" fill="#1e293b"/>
-        <text x="12" y="20" fill="#60a5fa" font-size="11" font-weight="700">Proleasing Motors (Certified)</text>
-        <text x="12" y="34" fill="#94a3b8" font-size="9.5">BMW Premium Selection &amp; Ford Stock (Ploiești/Buzău)</text>
+      <g transform="translate(16, 52)">
+        <rect x="0" y="0" width="148" height="48" rx="6" fill="#111827"/>
+        <text x="10" y="20" fill="#f43f5e" font-size="11" font-weight="700">🇩🇪 MediaMarkt &amp; Mindfactory</text>
+        <text x="10" y="34" fill="#94a3b8" font-size="9.5">Germany #1 Retail &amp; PC</text>
 
-        <rect x="0" y="54" width="300" height="46" rx="6" fill="#1e293b"/>
-        <text x="12" y="74" fill="#38bdf8" font-size="11" font-weight="700">Autovit.ro / Mobile.de / AutoTrader</text>
-        <text x="12" y="88" fill="#94a3b8" font-size="9.5">Verified Automotive Classifieds &amp; Dealer Inventory</text>
+        <rect x="158" y="0" width="148" height="48" rx="6" fill="#111827"/>
+        <text x="168" y="20" fill="#60a5fa" font-size="11" font-weight="700">🇬🇧 Currys &amp; Scan UK</text>
+        <text x="168" y="34" fill="#94a3b8" font-size="9.5">High-Street &amp; 3XS Systems</text>
+
+        <rect x="0" y="56" width="148" height="48" rx="6" fill="#111827"/>
+        <text x="10" y="76" fill="#f59e0b" font-size="11" font-weight="700">🇫🇷 Fnac &amp; LDLC France</text>
+        <text x="10" y="90" fill="#94a3b8" font-size="9.5">Paris &amp; Lyon Warehouses</text>
+
+        <rect x="158" y="56" width="148" height="48" rx="6" fill="#111827"/>
+        <text x="168" y="76" fill="#34d399" font-size="11" font-weight="700">🇮🇹 MediaWorld &amp; Unieuro</text>
+        <text x="168" y="90" fill="#94a3b8" font-size="9.5">Italy Electronics Chains</text>
+
+        <rect x="0" y="112" width="306" height="44" rx="6" fill="#111827"/>
+        <text x="12" y="130" fill="#fbbf24" font-size="11" font-weight="700">🇪🇸 PcComponentes &amp; MediaMarkt ES</text>
+        <text x="12" y="144" fill="#94a3b8" font-size="9.5">Spain Flagship Tech Retail &amp; Madrid Stores</text>
       </g>
     </g>
 
-    <!-- Column 3: Global Direct & B2B Marketplaces -->
-    <g transform="translate(740, 66)">
-      <rect x="0" y="0" width="350" height="166" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="16" y="24" fill="#f8fafc" font-size="12" font-weight="700">Global Direct &amp; Wholesale Platforms</text>
-      <text x="16" y="40" fill="#94a3b8" font-size="10.5">Factory direct consumer &amp; B2B multi-currency</text>
+    <!-- Column 3: Nordics, Benelux, Poland & Switzerland -->
+    <g transform="translate(745, 66)">
+      <rect x="0" y="0" width="345" height="225" rx="10" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+      <text x="16" y="24" fill="#f8fafc" font-size="12.5" font-weight="700">🇳🇱 🇵🇱 🇸🇪 🇨🇭 🇨🇿 Continental Retail</text>
+      <text x="16" y="40" fill="#94a3b8" font-size="10.5">Specialized domestic brick-and-mortar champions</text>
 
-      <g transform="translate(16, 54)">
-        <rect x="0" y="0" width="150" height="46" rx="6" fill="#1e293b"/>
-        <text x="10" y="20" fill="#ea580c" font-size="11" font-weight="700">AliExpress</text>
-        <text x="10" y="34" fill="#94a3b8" font-size="9.5">Global Choice / Direct</text>
+      <g transform="translate(16, 52)">
+        <rect x="0" y="0" width="148" height="48" rx="6" fill="#111827"/>
+        <text x="10" y="20" fill="#38bdf8" font-size="11" font-weight="700">🇳🇱 Coolblue &amp; Megekko</text>
+        <text x="10" y="34" fill="#94a3b8" font-size="9.5">Netherlands Hardware</text>
 
-        <rect x="160" y="0" width="150" height="46" rx="6" fill="#1e293b"/>
-        <text x="170" y="20" fill="#fbbf24" font-size="11" font-weight="700">Temu Global</text>
-        <text x="170" y="34" fill="#94a3b8" font-size="9.5">Direct Factory SSR</text>
+        <rect x="158" y="0" width="148" height="48" rx="6" fill="#111827"/>
+        <text x="168" y="20" fill="#34d399" font-size="11" font-weight="700">🇵🇱 x-kom &amp; Media Expert</text>
+        <text x="168" y="34" fill="#94a3b8" font-size="9.5">Poland Salons &amp; InPost</text>
 
-        <rect x="0" y="54" width="150" height="46" rx="6" fill="#1e293b"/>
-        <text x="10" y="74" fill="#f59e0b" font-size="11" font-weight="700">Alibaba Wholesale</text>
-        <text x="10" y="88" fill="#94a3b8" font-size="9.5">B2B MOQ &amp; Bulk Tiers</text>
+        <rect x="0" y="56" width="148" height="48" rx="6" fill="#111827"/>
+        <text x="10" y="76" fill="#a78bfa" font-size="11" font-weight="700">🇸🇪 Webhallen &amp; Inet</text>
+        <text x="10" y="90" fill="#94a3b8" font-size="9.5">Sweden Gaming Stores</text>
 
-        <rect x="160" y="54" width="150" height="46" rx="6" fill="#1e293b"/>
-        <text x="170" y="74" fill="#38bdf8" font-size="11" font-weight="700">Amazon Multi</text>
-        <text x="170" y="88" fill="#94a3b8" font-size="9.5">US, DE, UK, IT, FR</text>
+        <rect x="158" y="56" width="148" height="48" rx="6" fill="#111827"/>
+        <text x="168" y="76" fill="#f59e0b" font-size="11" font-weight="700">🇨🇭 Digitec Galaxus</text>
+        <text x="168" y="90" fill="#94a3b8" font-size="9.5">Swiss CHF Store Pickup</text>
+
+        <rect x="0" y="112" width="306" height="44" rx="6" fill="#111827"/>
+        <text x="12" y="130" fill="#f87171" font-size="11" font-weight="700">🇨🇿 Alza CZ • 🇳🇴 Komplett • 🇩🇰 Proshop</text>
+        <text x="12" y="144" fill="#94a3b8" font-size="9.5">AlzaBox Locker Pickup • Nordic Distribution Hubs</text>
       </g>
     </g>
 
-    <!-- Column 4: US & Australia Tech Champions -->
+    <!-- Column 4: US, Canada, Australia & Global Direct -->
     <g transform="translate(1110, 66)">
-      <rect x="0" y="0" width="350" height="166" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="16" y="24" fill="#f8fafc" font-size="12" font-weight="700">US &amp; Australia Big-Box Retail</text>
-      <text x="16" y="40" fill="#94a3b8" font-size="10.5">Physical store in-store shelf verification</text>
+      <rect x="0" y="0" width="350" height="225" rx="10" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+      <text x="16" y="24" fill="#f8fafc" font-size="12.5" font-weight="700">🇺🇸 🇨🇦 🇦🇺 🌐 Global &amp; Big-Box</text>
+      <text x="16" y="40" fill="#94a3b8" font-size="10.5">Physical store shelf verification &amp; factory direct</text>
 
-      <g transform="translate(16, 54)">
-        <rect x="0" y="0" width="150" height="46" rx="6" fill="#1e293b"/>
-        <text x="10" y="20" fill="#60a5fa" font-size="11" font-weight="700">Micro Center (US)</text>
-        <text x="10" y="34" fill="#94a3b8" font-size="9.5">28 Walk-In Warehouses</text>
+      <g transform="translate(16, 52)">
+        <rect x="0" y="0" width="150" height="48" rx="6" fill="#111827"/>
+        <text x="10" y="20" fill="#3b82f6" font-size="11" font-weight="700">🇺🇸 Micro Center &amp; Best Buy</text>
+        <text x="10" y="34" fill="#94a3b8" font-size="9.5">Walk-in Tech Superstores</text>
 
-        <rect x="160" y="0" width="150" height="46" rx="6" fill="#1e293b"/>
-        <text x="170" y="20" fill="#facc15" font-size="11" font-weight="700">Best Buy (US)</text>
-        <text x="170" y="34" fill="#94a3b8" font-size="9.5">In-Store Pickup API</text>
+        <rect x="160" y="0" width="150" height="48" rx="6" fill="#111827"/>
+        <text x="170" y="20" fill="#f43f5e" font-size="11" font-weight="700">🇨🇦 Canada Computers</text>
+        <text x="170" y="34" fill="#94a3b8" font-size="9.5">Toronto/Vancouver Stores</text>
 
-        <rect x="0" y="54" width="150" height="46" rx="6" fill="#1e293b"/>
-        <text x="10" y="74" fill="#34d399" font-size="11" font-weight="700">Scorptec (AU)</text>
-        <text x="10" y="88" fill="#94a3b8" font-size="9.5">Melbourne/Sydney Branches</text>
+        <rect x="0" y="56" width="150" height="48" rx="6" fill="#111827"/>
+        <text x="10" y="76" fill="#34d399" font-size="11" font-weight="700">🇦🇺 Scorptec &amp; JB Hi-Fi</text>
+        <text x="10" y="90" fill="#94a3b8" font-size="9.5">Melbourne &amp; Sydney</text>
 
-        <rect x="160" y="54" width="150" height="46" rx="6" fill="#1e293b"/>
-        <text x="170" y="74" fill="#f43f5e" font-size="11" font-weight="700">JB Hi-Fi (AU)</text>
-        <text x="170" y="88" fill="#94a3b8" font-size="9.5">Nationwide Stock Check</text>
+        <rect x="160" y="56" width="150" height="48" rx="6" fill="#111827"/>
+        <text x="170" y="76" fill="#ea580c" font-size="11" font-weight="700">AliExpress &amp; Temu</text>
+        <text x="170" y="90" fill="#94a3b8" font-size="9.5">Global Choice Direct</text>
+
+        <rect x="0" y="112" width="310" height="44" rx="6" fill="#111827"/>
+        <text x="12" y="130" fill="#facc15" font-size="11" font-weight="700">Amazon Multi-Domain • Alibaba B2B • 🇯🇵 Yodobashi</text>
+        <text x="12" y="144" fill="#94a3b8" font-size="9.5">Multi-currency (USD, EUR, GBP, CAD, JPY, CHF, RON)</text>
       </g>
     </g>
   </g>
 
-  <!-- Connectors from Layer 4 down to Layer 5 (Aggregation & Response) -->
-  <path d="M 800 860 L 800 900" fill="none" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrowAmber)"/>
+  <!-- Downward Connector: Layer 4 -> Layer 5 -->
+  <path d="M 800 915 L 800 955" fill="none" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrowAmber)"/>
 
-  <!-- ==================== 5. UNIFIED SCHEMA & RESPONSE LAYER ==================== -->
-  <g transform="translate(60, 910)">
-    <!-- Container Box -->
-    <rect x="0" y="0" width="1480" height="140" rx="16" fill="url(#cardGradDark)" stroke="#10b981" stroke-width="1.5"/>
+  <!-- ==================== LAYER 5: DATA NORMALIZATION & CLIENT RENDERING ==================== -->
+  <g transform="translate(60, 960)">
+    <!-- Container -->
+    <rect x="0" y="0" width="1480" height="175" rx="16" fill="url(#cardDarkGrad)" stroke="#10b981" stroke-width="1.5"/>
 
-    <!-- Header -->
-    <rect x="18" y="14" width="320" height="30" rx="6" fill="#10b981" fill-opacity="0.15"/>
-    <text x="30" y="34" fill="#34d399" font-size="12" font-weight="700">5. Unified Data Normalization &amp; Map Delivery</text>
+    <!-- Title -->
+    <rect x="18" y="16" width="340" height="32" rx="6" fill="#10b981" fill-opacity="0.15"/>
+    <text x="30" y="38" fill="#34d399" font-size="13" font-weight="800">5. Normalized Schema &amp; Presentation Engine</text>
 
-    <!-- Schema Badges -->
-    <g transform="translate(360, 16)">
-      <rect x="0" y="0" width="150" height="26" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="75" y="17" fill="#cbd5e1" font-size="11" font-weight="600" text-anchor="middle">StoreResult Schema</text>
+    <!-- Schema Chips -->
+    <g transform="translate(380, 18)">
+      <rect x="0" y="0" width="150" height="28" rx="6" fill="#0c1322" stroke="#1f2937" stroke-width="1"/>
+      <text x="75" y="18" fill="#e5e7eb" font-size="11" font-weight="700" text-anchor="middle">StoreResult Schema</text>
 
-      <rect x="165" y="0" width="140" height="26" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="235" y="17" fill="#cbd5e1" font-size="11" font-weight="600" text-anchor="middle">StockLevel Enum</text>
+      <rect x="165" y="0" width="150" height="28" rx="6" fill="#0c1322" stroke="#1f2937" stroke-width="1"/>
+      <text x="240" y="18" fill="#e5e7eb" font-size="11" font-weight="700" text-anchor="middle">StockLevel (3-State)</text>
 
-      <rect x="320" y="0" width="150" height="26" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="395" y="17" fill="#cbd5e1" font-size="11" font-weight="600" text-anchor="middle">Physical Branch Geo</text>
+      <rect x="330" y="0" width="160" height="28" rx="6" fill="#0c1322" stroke="#1f2937" stroke-width="1"/>
+      <text x="410" y="18" fill="#e5e7eb" font-size="11" font-weight="700" text-anchor="middle">Showroom GPS Bounds</text>
 
-      <rect x="485" y="0" width="140" height="26" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="555" y="17" fill="#cbd5e1" font-size="11" font-weight="600" text-anchor="middle">Price &amp; Currency Sync</text>
+      <rect x="505" y="0" width="150" height="28" rx="6" fill="#0c1322" stroke="#1f2937" stroke-width="1"/>
+      <text x="580" y="18" fill="#e5e7eb" font-size="11" font-weight="700" text-anchor="middle">Currency Normalization</text>
 
-      <rect x="640" y="0" width="140" height="26" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="710" y="17" fill="#34d399" font-size="11" font-weight="700" text-anchor="middle">Direct Deal Links</text>
+      <rect x="670" y="0" width="150" height="28" rx="6" fill="#0c1322" stroke="#1f2937" stroke-width="1"/>
+      <text x="745" y="18" fill="#34d399" font-size="11" font-weight="800" text-anchor="middle">Direct Deal Links</text>
     </g>
 
-    <!-- Output Flow Breakdown -->
-    <g transform="translate(20, 56)">
-      <!-- Box 1 -->
-      <rect x="0" y="0" width="340" height="66" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="14" y="22" fill="#38bdf8" font-size="12" font-weight="700">Card Grid Presentation</text>
-      <text x="14" y="38" fill="#94a3b8" font-size="10.5">High-density glass cards with stock status badges</text>
-      <text x="14" y="52" fill="#cbd5e1" font-size="10">Sorted by Nearest Branch &amp; Live In-Stock availability</text>
+    <!-- Presentation Outputs -->
+    <g transform="translate(20, 64)">
+      <!-- Card Grid -->
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="340" height="92" rx="10" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+        <text x="16" y="24" fill="#38bdf8" font-size="13" font-weight="700">Glass Cards Presentation</text>
+        <text x="16" y="44" fill="#94a3b8" font-size="11">Real-time dynamic stock badges &amp; specs</text>
+        <text x="16" y="62" fill="#cbd5e1" font-size="10.5">🟢 On Shelf • 🟡 Online Stock • 🔴 Out of Stock</text>
+        <text x="16" y="78" fill="#60a5fa" font-size="10" font-weight="600">Automotive specs: Year, Mileage km, Fuel type</text>
+      </g>
 
-      <!-- Box 2 -->
-      <rect x="360" y="0" width="350" height="66" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="14" y="22" fill="#34d399" font-size="12" font-weight="700">Interactive Leaflet Map</text>
-      <text x="14" y="38" fill="#94a3b8" font-size="10.5">OpenStreetMap zero-cost vector &amp; raster tiles</text>
-      <text x="14" y="52" fill="#cbd5e1" font-size="10">Pins showroom branches with direct directions &amp; stock</text>
+      <!-- Leaflet Map -->
+      <g transform="translate(365, 0)">
+        <rect x="0" y="0" width="345" height="92" rx="10" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+        <text x="16" y="24" fill="#34d399" font-size="13" font-weight="700">Interactive Leaflet Map</text>
+        <text x="16" y="44" fill="#94a3b8" font-size="11">OpenStreetMap zero-cost vector &amp; raster tiles</text>
+        <text x="16" y="62" fill="#cbd5e1" font-size="10.5">Color-coded showroom pins with live shelf inventory</text>
+        <text x="16" y="78" fill="#34d399" font-size="10" font-weight="600">One-click Google Maps / OpenStreetMap directions</text>
+      </g>
 
-      <!-- Box 3 -->
-      <rect x="730" y="0" width="350" height="66" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="14" y="22" fill="#fbbf24" font-size="12" font-weight="700">Client-Side Distance Recalculation</text>
-      <text x="14" y="38" fill="#94a3b8" font-size="10.5">Immediate re-sorting when switching cities</text>
-      <text x="14" y="52" fill="#cbd5e1" font-size="10">Zero roundtrip needed to re-evaluate branch distances</text>
+      <!-- Distance Re-ranking -->
+      <g transform="translate(735, 0)">
+        <rect x="0" y="0" width="345" height="92" rx="10" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+        <text x="16" y="24" fill="#fbbf24" font-size="13" font-weight="700">Client-Side Distance Recalculation</text>
+        <text x="16" y="44" fill="#94a3b8" font-size="11">Instant re-sorting on city or country switch</text>
+        <text x="16" y="62" fill="#cbd5e1" font-size="10.5">Zero roundtrip overhead to recompute nearest store</text>
+        <text x="16" y="78" fill="#f59e0b" font-size="10" font-weight="600">Filters by in-stock shelf items within driving range</text>
+      </g>
 
-      <!-- Box 4 -->
-      <rect x="1100" y="0" width="340" height="66" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1"/>
-      <text x="14" y="22" fill="#c084fc" font-size="12" font-weight="700">TrueNAS Scale Deployment</text>
-      <text x="14" y="38" fill="#94a3b8" font-size="10.5">Docker Compose container on Port 3005</text>
-      <text x="14" y="52" fill="#cbd5e1" font-size="10">Reverse-proxied via Nginx Proxy Manager &amp; Cloudflare</text>
+      <!-- TrueNAS Deployment -->
+      <g transform="translate(1105, 0)">
+        <rect x="0" y="0" width="335" height="92" rx="10" fill="#0c1322" stroke="#1e293b" stroke-width="1"/>
+        <text x="16" y="24" fill="#c084fc" font-size="13" font-weight="700">TrueNAS SCALE Docker Host</text>
+        <text x="16" y="44" fill="#94a3b8" font-size="11">Lightweight production container on Port 3005</text>
+        <text x="16" y="62" fill="#cbd5e1" font-size="10.5">Cloudflare Zero Trust &amp; Nginx Proxy Manager</text>
+        <text x="16" y="78" fill="#a78bfa" font-size="10" font-weight="600">storestock.polychroms.dev • TLS 1.3 Active</text>
+      </g>
     </g>
   </g>
 
-  <!-- Watermark & Footer Metadata -->
-  <text x="60" y="1080" fill="#475569" font-size="11" font-weight="500">StoreStock System Architecture &bull; Generated for TrueNAS SCALE Production Environment &bull; Scalable to 50+ Regional Champions</text>
-  <text x="1540" y="1080" fill="#475569" font-size="11" font-weight="600" text-anchor="end">SVG Vector Scheme &bull; 1600 x 1100 px</text>
+  <!-- ==================== FOOTER ==================== -->
+  <text x="60" y="1175" fill="#4b5563" font-size="11.5" font-weight="600">StoreStock System Architecture Scheme • Production Ready • Fully Containerized on TrueNAS SCALE • 24+ International Domestic Markets</text>
+  <text x="1540" y="1175" fill="#4b5563" font-size="11.5" font-weight="700" text-anchor="end">SVG Vector Map • 1600 x 1200 px</text>
 </svg>

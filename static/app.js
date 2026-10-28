@@ -2273,6 +2273,87 @@ if (feedbackForm) {
   });
 }
 
+// --- Architecture Scheme Download Authentication ("radu1234") ---
+const openArchAuthBtn = document.getElementById('openArchAuthBtn');
+const architectureAuthModal = document.getElementById('architectureAuthModal');
+const closeArchModalBtn = document.getElementById('closeArchModalBtn');
+const cancelArchModalBtn = document.getElementById('cancelArchModalBtn');
+const archAuthForm = document.getElementById('archAuthForm');
+const archPasswordInput = document.getElementById('archPasswordInput');
+const archAuthError = document.getElementById('archAuthError');
+
+function openArchitectureAuthModal() {
+  if (!architectureAuthModal) return;
+  if (archAuthError) archAuthError.classList.add('hidden');
+  if (archPasswordInput) {
+    archPasswordInput.value = '';
+    archPasswordInput.classList.remove('border-rose-500');
+  }
+  architectureAuthModal.classList.remove('hidden');
+  safeRenderIcons();
+  setTimeout(() => {
+    if (archPasswordInput) archPasswordInput.focus();
+  }, 50);
+}
+
+function closeArchitectureAuthModal() {
+  if (!architectureAuthModal) return;
+  architectureAuthModal.classList.add('hidden');
+  if (archAuthError) archAuthError.classList.add('hidden');
+  if (archPasswordInput) {
+    archPasswordInput.value = '';
+    archPasswordInput.classList.remove('border-rose-500');
+  }
+}
+
+if (openArchAuthBtn) {
+  openArchAuthBtn.addEventListener('click', openArchitectureAuthModal);
+}
+if (closeArchModalBtn) {
+  closeArchModalBtn.addEventListener('click', closeArchitectureAuthModal);
+}
+if (cancelArchModalBtn) {
+  cancelArchModalBtn.addEventListener('click', closeArchitectureAuthModal);
+}
+if (architectureAuthModal) {
+  architectureAuthModal.addEventListener('click', (e) => {
+    if (e.target === architectureAuthModal) closeArchitectureAuthModal();
+  });
+}
+
+if (archAuthForm) {
+  archAuthForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const entered = (archPasswordInput ? archPasswordInput.value : '').trim();
+
+    if (entered !== 'radu1234') {
+      if (archAuthError) {
+        archAuthError.textContent = 'Incorrect password. Access denied.';
+        archAuthError.classList.remove('hidden');
+      }
+      if (archPasswordInput) {
+        archPasswordInput.classList.add('border-rose-500');
+        archPasswordInput.focus();
+        archPasswordInput.select();
+      }
+      showToast('Access denied: incorrect architecture password.', 'error');
+      return;
+    }
+
+    // Success: trigger secure download from backend
+    closeArchitectureAuthModal();
+    showToast('Password verified! Downloading architecture SVG...', 'success');
+
+    const downloadUrl = `/api/architecture/download?password=${encodeURIComponent(entered)}`;
+    const tempLink = document.createElement('a');
+    tempLink.href = downloadUrl;
+    tempLink.download = 'storestock_architecture.svg';
+    document.body.appendChild(tempLink);
+    tempLink.click();
+    document.body.removeChild(tempLink);
+  });
+}
+
 // Robust Initialization
 async function initApp() {
   try {
