@@ -1084,85 +1084,74 @@ function setupGeolocation() {
     autoDetectLocationBtn.onclick = () => {
       autoDetectLocationBtn.innerHTML = `
         <span class="inline-block w-4 h-4 rounded-full border-2 border-slate-950 border-t-transparent animate-spin mr-2"></span>
-        <span>Detecting current location...</span>
+        <span>Detecting approximate location...</span>
       `;
 
-      // Clear stale cached coordinates from previous VPN sessions
+      // Clear stale cached coordinates from previous sessions
       localStorage.removeItem('storestock_loc_name');
       localStorage.removeItem('storestock_loc_lat');
       localStorage.removeItem('storestock_loc_lon');
       localStorage.removeItem('storestock_loc_set');
 
-      // Function to apply IP-detected location if browser geolocation fails or is denied
-      const fallbackToIpLocation = async () => {
-        const ipLoc = await detectVisitorLocation();
-        if (ipLoc && ipLoc.city) {
-          if (countrySelect && ipLoc.countryCode) {
-            countrySelect.value = ipLoc.countryCode;
-            currentDetectedCountry = ipLoc.countryCode;
-            renderMajorCities(ipLoc.countryCode);
+      const triggerManualSelectionNotice = (msg) => {
+        resetLocationButtons();
+        if (locationModalNotice) {
+          locationModalNotice.classList.remove('hidden');
+          if (locationModalNoticeText) {
+            locationModalNoticeText.textContent = msg || "Unable to detect your location automatically on this device (no GPS hardware). Please select your city from the examples below or enter it manually:";
           }
-          setLocation(ipLoc.city, ipLoc.lat, ipLoc.lon);
-          if (locationModal) locationModal.classList.add('hidden');
-          resetLocationButtons();
-          showToast(`📍 Detected area: ${ipLoc.city} (${ipLoc.countryName || ipLoc.countryCode}).`);
-          return true;
         }
-        return false;
+        showToast("Unable to detect location. Please select your city manually.", 'warning');
+        if (customCityInput) customCityInput.focus();
       };
 
       if (!navigator.geolocation) {
-        fallbackToIpLocation().then(ok => {
-          if (!ok) showToast("Geolocation is not supported by your browser", 'warning');
-        });
+        triggerManualSelectionNotice("Geolocation is not supported by your browser. Please select your city manually:");
         return;
       }
 
-      // Request fresh live location (maximumAge: 0 ensures NO stale VPN cache is returned by browser)
+      // Request live location from browser
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
           resetLocationButtons();
           const lat = pos.coords.latitude;
           const lon = pos.coords.longitude;
           
-          let locName = "Approximate Location";
+          let locName = null;
           let detectedCountryCode = null;
           try {
             const revRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`);
             const revData = await revRes.json();
-            locName = revData.address.city || revData.address.town || revData.address.municipality || revData.address.county || revData.address.state || "Your Area";
-            if (revData.address && revData.address.country_code) {
-              detectedCountryCode = revData.address.country_code.toUpperCase();
-            }
-          } catch (e) {
-            locName = "Your Area";
-          }
-
-          // Sync country dropdown and city examples with the real physical country!
-          if (detectedCountryCode && COUNTRY_CITIES[detectedCountryCode]) {
-            currentDetectedCountry = detectedCountryCode;
-            if (countrySelect) countrySelect.value = detectedCountryCode;
-            renderMajorCities(detectedCountryCode);
-          }
-
-          setLocation(locName, lat, lon);
-          if (locationModal) locationModal.classList.add('hidden');
-        },
-        async (err) => {
-          console.warn("Browser GPS permission error, falling back to IP:", err.message);
-          const ok = await fallbackToIpLocation();
-          if (!ok) {
-            resetLocationButtons();
-            if (locationModalNotice) {
-              locationModalNotice.classList.remove('hidden');
-              if (locationModalNoticeText) {
-                locationModalNoticeText.textContent = "Location permission was not granted. Please enter your city below or select from the examples:";
+            if (revData && revData.address) {
+              locName = revData.address.city || revData.address.town || revData.address.municipality || revData.address.county;
+              if (revData.address.country_code) {
+                detectedCountryCode = revData.address.country_code.toUpperCase();
               }
             }
-            if (customCityInput) customCityInput.focus();
+          } catch (e) {}
+
+          // If a valid city was found:
+          if (locName) {
+            // Sync country dropdown and city examples with the real country!
+            if (detectedCountryCode && COUNTRY_CITIES[detectedCountryCode]) {
+              currentDetectedCountry = detectedCountryCode;
+              if (countrySelect) countrySelect.value = detectedCountryCode;
+              renderMajorCities(detectedCountryCode);
+            }
+            setLocation(locName, lat, lon);
+            if (locationModal) locationModal.classList.add('hidden');
+            showToast(`📍 Location set to ${locName}`);
+          } else {
+            // Could not identify a clear city: prompt user to pick manually
+            triggerManualSelectionNotice("Unable to pinpoint your city. Please choose from the examples below or type your city:");
           }
         },
-        { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
+        (err) => {
+          // Hardware/GPS/Permission error on laptop or desktop without GPS
+          console.warn("Browser GPS permission or hardware error:", err.message);
+          triggerManualSelectionNotice("Unable to detect location automatically on this device (no GPS hardware). Please pick your city below or enter it manually:");
+        },
+        { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
       );
     };
   }
