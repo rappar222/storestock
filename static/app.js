@@ -1084,18 +1084,25 @@ function setupGeolocation() {
     autoDetectLocationBtn.onclick = () => {
       autoDetectLocationBtn.innerHTML = `
         <span class="inline-block w-4 h-4 rounded-full border-2 border-slate-950 border-t-transparent animate-spin mr-2"></span>
-        <span>Detecting approximate city...</span>
+        <span>Detecting current location...</span>
       `;
+
+      // Clear stale cached coordinates from previous VPN sessions
+      localStorage.removeItem('storestock_loc_name');
+      localStorage.removeItem('storestock_loc_lat');
+      localStorage.removeItem('storestock_loc_lon');
+      localStorage.removeItem('storestock_loc_set');
 
       // Function to apply IP-detected location if browser geolocation fails or is denied
       const fallbackToIpLocation = async () => {
         const ipLoc = await detectVisitorLocation();
         if (ipLoc && ipLoc.city) {
-          setLocation(ipLoc.city, ipLoc.lat, ipLoc.lon);
           if (countrySelect && ipLoc.countryCode) {
             countrySelect.value = ipLoc.countryCode;
+            currentDetectedCountry = ipLoc.countryCode;
             renderMajorCities(ipLoc.countryCode);
           }
+          setLocation(ipLoc.city, ipLoc.lat, ipLoc.lon);
           if (locationModal) locationModal.classList.add('hidden');
           resetLocationButtons();
           showToast(`📍 Detected area: ${ipLoc.city} (${ipLoc.countryName || ipLoc.countryCode}).`);
@@ -1106,12 +1113,12 @@ function setupGeolocation() {
 
       if (!navigator.geolocation) {
         fallbackToIpLocation().then(ok => {
-          if (!ok) showToast("Geolocation is not supported by your browser");
+          if (!ok) showToast("Geolocation is not supported by your browser", 'warning');
         });
         return;
       }
 
-      // Request approximate location without GPS lock (fast, privacy friendly)
+      // Request fresh live location (maximumAge: 0 ensures NO stale VPN cache is returned by browser)
       navigator.geolocation.getCurrentPosition(
         async (pos) => {
           resetLocationButtons();
@@ -1119,12 +1126,23 @@ function setupGeolocation() {
           const lon = pos.coords.longitude;
           
           let locName = "Approximate Location";
+          let detectedCountryCode = null;
           try {
-            const revRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+            const revRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`);
             const revData = await revRes.json();
             locName = revData.address.city || revData.address.town || revData.address.municipality || revData.address.county || revData.address.state || "Your Area";
+            if (revData.address && revData.address.country_code) {
+              detectedCountryCode = revData.address.country_code.toUpperCase();
+            }
           } catch (e) {
             locName = "Your Area";
+          }
+
+          // Sync country dropdown and city examples with the real physical country!
+          if (detectedCountryCode && COUNTRY_CITIES[detectedCountryCode]) {
+            currentDetectedCountry = detectedCountryCode;
+            if (countrySelect) countrySelect.value = detectedCountryCode;
+            renderMajorCities(detectedCountryCode);
           }
 
           setLocation(locName, lat, lon);
@@ -1144,7 +1162,7 @@ function setupGeolocation() {
             if (customCityInput) customCityInput.focus();
           }
         },
-        { enableHighAccuracy: false, timeout: 6000, maximumAge: 300000 }
+        { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 }
       );
     };
   }
