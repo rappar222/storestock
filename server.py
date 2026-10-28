@@ -3,6 +3,7 @@ import json
 import asyncio
 import smtplib
 import datetime
+import httpx
 from email.message import EmailMessage
 from typing import Optional
 from fastapi import FastAPI, Query, HTTPException, Body, Request
@@ -159,24 +160,27 @@ async def submit_feedback(request: Request, payload: dict = Body(...)):
     except Exception as e:
         print(f"[Feedback] Failed to save feedback locally: {e}")
 
-    # 2. Attempt SMTP dispatch to feedback@polychroms.dev
     target_email = "feedback@polychroms.dev"
-    smtp_host = os.environ.get("SMTP_HOST", "localhost")
-    smtp_port = int(os.environ.get("SMTP_PORT", "25"))
-    smtp_user = os.environ.get("SMTP_USER")
-    smtp_pass = os.environ.get("SMTP_PASSWORD")
-    smtp_from = os.environ.get("SMTP_FROM", email or "feedback-noreply@polychroms.dev")
+    smtp_host = os.environ.get("SMTP_HOST", "").strip() or None
+    smtp_user = os.environ.get("SMTP_USER", "").strip() or None
+    smtp_pass = os.environ.get("SMTP_PASSWORD", "").replace(" ", "").strip() or None
+    smtp_port = int(os.environ.get("SMTP_PORT", "587").strip() or 587)
+    smtp_from = os.environ.get("SMTP_FROM", "").strip() or (smtp_user or "feedback-noreply@polychroms.dev")
 
     email_sent = False
-    try:
-        msg = EmailMessage()
-        msg["Subject"] = f"[StoreStock {category}] {subject}"
-        msg["From"] = smtp_from
-        msg["To"] = target_email
-        if email:
-            msg["Reply-To"] = email
+    delivery_note = ""
 
-        email_body = f"""New StoreStock Feedback Submission:
+    # Strategy A: If explicit SMTP server credentials are provided via environment variables
+    if smtp_host:
+        try:
+            msg = EmailMessage()
+            msg["Subject"] = f"[StoreStock {category}] {subject}"
+            msg["From"] = smtp_from
+            msg["To"] = target_email
+            if email:
+                msg["Reply-To"] = email
+
+            email_body = f"""New StoreStock Feedback Submission:
 ======================================================
 Category:   {category}
 Subject:    {subject}
@@ -194,34 +198,71 @@ Message / Description:
 {message}
 ======================================================
 """
-        msg.set_content(email_body)
+            msg.set_content(email_body)
 
-        if smtp_user and smtp_pass:
             if smtp_port == 465:
-                with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=5) as server:
-                    server.login(smtp_user, smtp_pass)
+                with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=8) as server:
+                    if smtp_user and smtp_pass:
+                        server.login(smtp_user, smtp_pass)
                     server.send_message(msg)
             else:
-                with smtplib.SMTP(smtp_host, smtp_port, timeout=5) as server:
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=8) as server:
                     if os.environ.get("SMTP_TLS", "true").lower() == "true":
                         server.starttls()
-                    server.login(smtp_user, smtp_pass)
+                    if smtp_user and smtp_pass:
+                        server.login(smtp_user, smtp_pass)
                     server.send_message(msg)
             email_sent = True
-        else:
-            # Try unauthenticated relay
-            with smtplib.SMTP(smtp_host, smtp_port, timeout=3) as server:
-                server.send_message(msg)
-            email_sent = True
-    except Exception as e:
-        print(f"[Feedback] Notice: Direct SMTP dispatch failed ({e}). Feedback is safely stored in {feedback_file}")
+            delivery_note = "Delivered via custom SMTP server."
+        except Exception as e:
+            print(f"[Feedback] Custom SMTP failed ({e}), attempting HTTPS delivery fallback...")
+
+    # Strategy B: Direct HTTPS FormSubmit API (bypasses ISP port 25 blocking and works out of the box)
+    if not email_sent:
+        try:
+            async with httpx.AsyncClient(timeout=12.0) as client:
+                resp = await client.post(
+                    f"https://formsubmit.co/ajax/{target_email}",
+                    json={
+                        "name": f"StoreStock Feedback ({category})",
+                        "email": email or "anonymous-user@storestock.app",
+                        "_subject": f"[StoreStock {category}] {subject}",
+                        "Category": category,
+                        "Subject": subject,
+                        "Sender_Email": email or "Not provided",
+                        "Country": country or "N/A",
+                        "City": city or "N/A",
+                        "Last_Query": last_query or "N/A",
+                        "Message": message,
+                        "User_Agent": user_agent,
+                        "_template": "table"
+                    },
+                    headers={
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "User-Agent": "StoreStock-Backend/3.0"
+                    }
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    email_sent = True
+                    msg_text = data.get("message", "")
+                    if "Activate" in msg_text or "activation" in msg_text.lower():
+                        delivery_note = f"Activation email sent to {target_email}. Please check inbox to approve first-time submissions!"
+                    else:
+                        delivery_note = "Successfully sent to feedback@polychroms.dev via HTTPS email dispatch."
+                else:
+                    print(f"[Feedback] FormSubmit HTTP {resp.status_code}: {resp.text}")
+        except Exception as e:
+            print(f"[Feedback] HTTPS email dispatch error: {e}")
 
     return {
-        "status": "success",
+        "status": "success" if email_sent else "saved_locally",
         "saved": True,
         "email_dispatched": email_sent,
         "target": target_email,
-        "message": "Feedback received and stored successfully!"
+        "note": delivery_note or f"Feedback stored locally in {feedback_file}. You can also email {target_email} directly.",
+        "message": delivery_note or "Feedback received and saved!"
     }
 
 if __name__ == "__main__":

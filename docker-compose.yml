@@ -11,9 +11,18 @@ services:
       - "3005:3000"
     environment:
       - PORT=3000
+      # SMTP Configuration for Feedback Dispatches
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM=${SMTP_FROM:-rappar2018@gmail.com}
+      - SMTP_TLS=${SMTP_TLS:-true}
     volumes:
       # Persist watchlist & restock alerts database across container restarts
       - ./alerts_db.json:/app/alerts_db.json
+      # Persist user feedback logs on host disk
+      - ./data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
       interval: 30s

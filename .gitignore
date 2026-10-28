@@ -28,6 +28,8 @@ alerts_db.json
 data/
 *.jsonl
 *.log
+.env
+.env.local
 
 # IDE & OS
 .idea/
