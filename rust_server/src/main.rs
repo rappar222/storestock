@@ -118,7 +118,7 @@ async fn main() {
         .nest_service("/static", ServeDir::new(static_dir))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
-        .with_state(state);
+        .with_state(state.clone());
 
     let port: u16 = std::env::var("PORT")
         .ok()
@@ -133,9 +133,8 @@ async fn main() {
         .await
         .expect("Failed to bind port");
 
-    let warmer_state = state.clone();
     tokio::spawn(async move {
-        run_cache_warmer(warmer_state).await;
+        run_cache_warmer(state).await;
     });
 
     axum::serve(listener, app).await.expect("Server error");
