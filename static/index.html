@@ -160,7 +160,7 @@
         Find <span class="text-emerald-400">Any Product or Car</span> in Stores
       </h1>
       <p class="text-xs sm:text-sm text-slate-400">
-        Workstation GPUs (<strong>RTX 5070 / A6000</strong>) • <strong>Cars & Vehicles</strong> • Groceries & Physical Shelf Stock
+        Workstation GPUs (<strong>RTX 5070 / A6000</strong>) • <strong>Cars & Vehicles</strong> • Retail Tech & Physical Shelf Stock
       </p>
     </div>
 
@@ -173,7 +173,7 @@
         <input 
           type="text" 
           id="searchInput" 
-          placeholder="Search products, hardware, groceries, or cars..." 
+          placeholder="Search products, hardware, retail electronics, or cars..." 
           class="w-full bg-transparent text-base sm:text-lg text-slate-100 placeholder-slate-500 outline-none px-2 py-2"
           autocomplete="off"
           value=""
@@ -246,11 +246,16 @@
 
     <!-- Stores Progress & Filter Pills -->
     <div id="storesProgressContainer" class="hidden space-y-1.5">
-      <div class="flex items-center justify-between text-[11px] text-slate-400 px-0.5">
+      <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400 px-0.5">
         <span class="flex items-center space-x-1 text-slate-400">
           <i data-lucide="mouse-pointer-click" class="w-3.5 h-3.5 text-emerald-400"></i>
           <span>Click any store below to filter results:</span>
         </span>
+        <div class="flex items-center space-x-3 text-[10.5px]">
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-400"></span> In Store / Shelf</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Online Stock</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> No Stock</span>
+        </div>
       </div>
       <div id="storesProgress" class="flex flex-wrap items-center gap-2"></div>
     </div>
@@ -279,10 +284,20 @@
 
     <!-- VIEW 2: Store Map View -->
     <div id="mapSection" class="hidden flex flex-col space-y-3">
-      <div class="flex items-center justify-between text-xs text-slate-400">
-        <div class="flex items-center space-x-2">
-          <span class="w-3 h-3 rounded-full bg-emerald-500"></span> <span>In Stock on Physical Shelf</span>
-          <span class="w-3 h-3 rounded-full bg-rose-500 ml-3"></span> <span>Out of Stock</span>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-400">
+        <div class="flex flex-wrap items-center gap-3.5">
+          <div class="flex items-center space-x-1.5">
+            <span class="w-3 h-3 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>
+            <span class="text-slate-200 font-medium">In Stock on Physical Shelf</span>
+          </div>
+          <div class="flex items-center space-x-1.5">
+            <span class="w-3 h-3 rounded-full bg-amber-400 shadow-sm shadow-amber-400/50"></span>
+            <span class="text-slate-200 font-medium">Online Stock</span>
+          </div>
+          <div class="flex items-center space-x-1.5">
+            <span class="w-3 h-3 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50"></span>
+            <span class="text-slate-200 font-medium">Out of Stock</span>
+          </div>
         </div>
         <div>Click any pin to inspect shelf stock and navigate</div>
       </div>
@@ -294,7 +309,7 @@
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-xl font-bold text-white">🔔 Restock Watchlist & Alerts</h2>
-          <p class="text-xs text-slate-400">Automatically tracks hard-to-find hardware & groceries, pinging you when stock returns.</p>
+          <p class="text-xs text-slate-400">Automatically tracks hard-to-find hardware & retail items, pinging you when stock returns.</p>
         </div>
         <button id="openNewAlertModalBtn" class="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs hover:bg-emerald-400 transition">
           <i data-lucide="plus" class="w-4 h-4"></i>
@@ -652,6 +667,6 @@
       }
     });
   </script>
-  <script src="/static/app.js?v=3.6"></script>
+  <script src="/static/app.js?v=3.9"></script>
 </body>
 </html>

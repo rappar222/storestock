@@ -15,7 +15,6 @@ from providers.ro.pcgarage import PCGarageProvider
 from providers.ro.flanco import FlancoProvider
 from providers.ro.auchan import AuchanProvider
 from providers.ro.evomag import EvoMagProvider
-from providers.ro.glovo_express import GlovoExpressProvider
 from providers.global_platforms.amazon import AmazonProvider
 from providers.global_platforms.aliexpress import AliExpressProvider
 from providers.global_platforms.temu import TemuProvider
@@ -41,7 +40,6 @@ class SearchEngine:
                 FlancoProvider(),
                 EvoMagProvider(),
                 AuchanProvider(),
-                GlovoExpressProvider(),
                 AmazonProvider("RO"),
                 AliExpressProvider("RO"),
                 TemuProvider("RO"),

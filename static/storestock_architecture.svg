@@ -287,8 +287,8 @@
         <text x="10" y="88" fill="#94a3b8" font-size="9.5">Hardware &amp; Shelf Stock</text>
 
         <rect x="155" y="54" width="145" height="46" rx="6" fill="#1e293b"/>
-        <text x="165" y="74" fill="#f43f5e" font-size="11" font-weight="700">Glovo (RO)</text>
-        <text x="165" y="88" fill="#94a3b8" font-size="9.5">Hypermarket Delivery</text>
+        <text x="165" y="74" fill="#38bdf8" font-size="11" font-weight="700">Flanco Retail</text>
+        <text x="165" y="88" fill="#94a3b8" font-size="9.5">Electronics &amp; Appliances</text>
       </g>
     </g>
 

@@ -99,8 +99,8 @@ class AmazonProvider(BaseProvider):
                     img_url = img_el.get("src") if img_el else None
 
                     in_stock = True
-                    stock_level = StockLevel.IN_STOCK
-                    badge_text = "In Stock (Amazon Prime / Global)"
+                    stock_level = StockLevel.ONLINE_STOCK
+                    badge_text = "Online Stock (Amazon Global)"
 
                     if "currently unavailable" in card.text.lower():
                         in_stock = False

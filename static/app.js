@@ -1364,7 +1364,7 @@ function executeSearch(query) {
         renderAiIntent(data.payload);
       } else if (data.type === 'provider_result') {
         const p = data.payload;
-        renderStorePill(p.store_name, p.items.length, p.elapsed_ms);
+        renderStorePill(p.store_name, p.items.length, p.elapsed_ms, p.items || []);
 
         if (p.items && p.items.length > 0) {
           currentResults.push(...p.items);
@@ -1398,7 +1398,7 @@ function executeSearch(query) {
   };
 }
 
-function renderStorePill(storeName, count, elapsedMs) {
+function renderStorePill(storeName, count, elapsedMs, items = []) {
   const pill = document.createElement('button');
   pill.type = 'button';
   pill.setAttribute('data-store', storeName);
@@ -1416,9 +1416,27 @@ function renderStorePill(storeName, count, elapsedMs) {
     baseClass += "bg-slate-800/90 border-slate-700 text-slate-300 hover:border-slate-500";
   }
 
+  // Dot color:
+  // 1. Red if count is 0 (No stock)
+  // 2. Yellow if online stock / warehouse delivery
+  // 3. Green if physical walk-in shelf stock
+  let dotClass = "bg-rose-500 shadow-sm shadow-rose-500/60";
+  let statusDesc = "No stock found";
+
+  if (count > 0) {
+    const hasShelfStock = items && items.some(it => it.store_branch && it.stock_level !== "ONLINE_STOCK" && it.stock_level !== "ONLINE_ONLY");
+    if (hasShelfStock) {
+      dotClass = "bg-emerald-400 animate-pulse shadow-sm shadow-emerald-500/60";
+      statusDesc = "In Stock on Physical Shelf";
+    } else {
+      dotClass = "bg-amber-400 shadow-sm shadow-amber-400/60";
+      statusDesc = "Online Stock";
+    }
+  }
+
   pill.className = baseClass;
   pill.innerHTML = `
-    <span class="w-2 h-2 rounded-full ${count > 0 ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400/80'}"></span>
+    <span class="w-2 h-2 rounded-full shrink-0 ${dotClass}" title="${statusDesc}"></span>
     <span>${storeName}:</span>
     <span class="text-white font-bold">${count} found</span>
     <span class="text-slate-500 text-[10px]">(${elapsedMs}ms)</span>
@@ -1460,9 +1478,24 @@ function updateStorePillsUI() {
 }
 
 function updateStats() {
+  const shelfCount = currentResults.filter(r => r.in_stock && r.store_branch && r.stock_level !== "ONLINE_STOCK").length;
+  const onlineCount = currentResults.filter(r => r.in_stock && (!r.store_branch || r.stock_level === "ONLINE_STOCK")).length;
   const inStockCount = currentResults.filter(r => r.in_stock).length;
-  inStockStat.textContent = `${inStockCount} In Stock`;
-  totalFoundStat.textContent = `${currentResults.length} Total Found`;
+  
+  if (inStockStat) {
+    if (shelfCount > 0 && onlineCount > 0) {
+      inStockStat.textContent = `${inStockCount} In Stock (${shelfCount} Shelf / ${onlineCount} Online)`;
+    } else if (shelfCount > 0) {
+      inStockStat.textContent = `${shelfCount} On Shelf`;
+    } else if (onlineCount > 0) {
+      inStockStat.textContent = `${onlineCount} Online Stock`;
+    } else {
+      inStockStat.textContent = `${inStockCount} In Stock`;
+    }
+  }
+  if (totalFoundStat) {
+    totalFoundStat.textContent = `${currentResults.length} Total Found`;
+  }
 }
 
 function renderBrandChips() {
@@ -1576,10 +1609,14 @@ function renderResults() {
     const card = document.createElement('div');
     card.className = "glass-card rounded-2xl p-4 flex flex-col justify-between hover:border-slate-600 transition duration-200 group";
 
+    const hasBranch = Boolean(item.store_branch);
+    const isOnlineStock = (item.stock_level === "ONLINE_STOCK" || item.stock_level === "ONLINE_ONLY" || (!hasBranch && item.in_stock)) && item.in_stock;
+
     let badgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
     let statusIcon = "check-circle";
-    let cleanStockText = "In Stock";
-    if (!item.in_stock) {
+    let cleanStockText = hasBranch ? "In Stock (Shelf)" : "In Stock";
+
+    if (!item.in_stock || item.stock_level === "OUT_OF_STOCK") {
       badgeClass = "bg-rose-500/10 text-rose-400 border border-rose-500/20";
       statusIcon = "x-circle";
       cleanStockText = "Out of Stock";
@@ -1587,6 +1624,14 @@ function renderResults() {
       badgeClass = "bg-amber-500/10 text-amber-400 border border-amber-500/20";
       statusIcon = "alert-triangle";
       cleanStockText = "Low Stock";
+    } else if (isOnlineStock) {
+      badgeClass = "bg-amber-400/15 text-amber-300 border border-amber-400/30";
+      statusIcon = "globe";
+      cleanStockText = "Online Stock";
+    } else if (hasBranch) {
+      badgeClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+      statusIcon = "check-circle";
+      cleanStockText = "In Stock (Shelf)";
     }
 
     let formattedPrice = `${item.price.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${item.currency}`;
@@ -1757,8 +1802,10 @@ function updateMapMarkers() {
   }
 
   itemsWithCoords.forEach(item => {
-    const isAvailable = item.in_stock;
-    const pinColor = isAvailable ? '#22c55e' : '#f43f5e';
+    const isAvailable = item.in_stock && item.stock_level !== "OUT_OF_STOCK";
+    const isOnline = item.stock_level === "ONLINE_STOCK" || item.stock_level === "ONLINE_ONLY" || !item.store_branch;
+    const pinColor = !isAvailable ? '#f43f5e' : (isOnline ? '#f59e0b' : '#22c55e');
+    const badgeLabel = !isAvailable ? 'OUT OF STOCK' : (isOnline ? 'ONLINE STOCK' : 'IN STOCK ON SHELF');
 
     const customIcon = L.divIcon({
       className: 'custom-pin',
@@ -1773,7 +1820,7 @@ function updateMapMarkers() {
     const popupContent = `
       <div style="min-width: 180px; font-family: sans-serif;">
         <div style="font-weight: bold; color: ${pinColor}; font-size: 11px; text-transform: uppercase;">
-          ${item.stock_badge_text}
+          ${badgeLabel}
         </div>
         <div style="font-size: 13px; font-weight: bold; margin-top: 2px; color: #f8fafc;">
           ${item.store_branch || item.store_name}

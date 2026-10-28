@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 class StockLevel(str, Enum):
     IN_STOCK = "IN_STOCK"
+    ONLINE_STOCK = "ONLINE_STOCK"
     LOW_STOCK = "LOW_STOCK"
     STORE_PICKUP_ONLY = "STORE_PICKUP_ONLY"
     PREORDER = "PREORDER"
