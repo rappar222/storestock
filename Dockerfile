@@ -1,6 +1,11 @@
 # Stage 1: Compile High-Speed Rust Axum Gateway Binary
 FROM rust:1.80-slim as rust-builder
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /build
 COPY rust_server/Cargo.toml rust_server/Cargo.lock* ./
 COPY rust_server/countries.json ./

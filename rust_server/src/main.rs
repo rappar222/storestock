@@ -15,6 +15,8 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::io::AsyncWriteExt;
+#[allow(unused_imports)]
+use futures_util::StreamExt;
 use tower_http::{
     cors::{Any, CorsLayer},
     services::ServeDir,
