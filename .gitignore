@@ -25,6 +25,8 @@ wheels/
 
 # Data & Local State
 alerts_db.json
+data/
+*.jsonl
 *.log
 
 # IDE & OS

@@ -7,6 +7,7 @@ from curl_cffi import requests
 import asyncio
 from core.schema import StoreResult, StockLevel, ProductCategory
 from providers.base import BaseProvider
+from providers.cars.auto_market import AutoMarketProvider
 
 class AliExpressProvider(BaseProvider):
     store_id = "aliexpress"
@@ -39,6 +40,9 @@ class AliExpressProvider(BaseProvider):
 
     def _sync_search(self, query: str) -> List[StoreResult]:
         results: List[StoreResult] = []
+        if AutoMarketProvider.is_car_query(query):
+            return results
+
         encoded = urllib.parse.quote_plus(query)
         url = f"https://www.aliexpress.com/w/wholesale-{encoded}.html"
 
@@ -57,27 +61,6 @@ class AliExpressProvider(BaseProvider):
                     results = self._parse_html(r.text, query, url)
         except Exception as e:
             print(f"[AliExpress] Error querying {query}: {e}")
-
-        # If empty (due to dynamic hydration or bot-check), provide direct marketplace search card
-        if not results:
-            results.append(
-                StoreResult(
-                    id=f"ali_search_{abs(hash(query)) % 100000}",
-                    store_name="AliExpress Direct",
-                    store_icon="globe",
-                    country_code=self.country_code,
-                    title=f"Search '{query}' on AliExpress Marketplace (Global Direct Factory)",
-                    price=0.0,
-                    currency=self.currency,
-                    in_stock=True,
-                    stock_level=StockLevel.IN_STOCK,
-                    stock_badge_text="In Stock (Choice)",
-                    product_url=f"https://www.aliexpress.com/wholesale?SearchText={encoded}",
-                    image_url="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=300&auto=format&fit=crop&q=60",
-                    delivery_info="AliExpress Global Buyer Protection",
-                    category=ProductCategory.GENERAL
-                )
-            )
 
         return results
 

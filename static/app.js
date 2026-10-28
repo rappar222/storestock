@@ -2008,6 +2008,135 @@ sortSelect.addEventListener('change', () => {
   renderResults();
 });
 
+// --- Feedback & Bug Report Modal Handling ---
+const feedbackModal = document.getElementById('feedbackModal');
+const openFeedbackModalBtn = document.getElementById('openFeedbackModalBtn');
+const openFeedbackFooterBtn = document.getElementById('openFeedbackFooterBtn');
+const closeFeedbackModalBtn = document.getElementById('closeFeedbackModalBtn');
+const cancelFeedbackModalBtn = document.getElementById('cancelFeedbackModalBtn');
+const feedbackForm = document.getElementById('feedbackForm');
+const feedbackCategory = document.getElementById('feedbackCategory');
+const feedbackSubject = document.getElementById('feedbackSubject');
+const feedbackEmail = document.getElementById('feedbackEmail');
+const feedbackMessage = document.getElementById('feedbackMessage');
+const submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
+const feedbackDiagnosticsPreview = document.getElementById('feedbackDiagnosticsPreview');
+const feedbackMailtoLink = document.getElementById('feedbackMailtoLink');
+
+function openFeedbackModal() {
+  if (!feedbackModal) return;
+  const currentCountry = countrySelect ? countrySelect.value : 'RO';
+  const currentCity = currentLocationLabel ? currentLocationLabel.textContent.trim() : 'Unknown';
+  const query = searchInput ? searchInput.value.trim() : '';
+
+  if (feedbackDiagnosticsPreview) {
+    feedbackDiagnosticsPreview.textContent = `${currentCountry} • ${currentCity}${query ? ` • "${query}"` : ''}`;
+  }
+
+  updateFeedbackMailto();
+  feedbackModal.classList.remove('hidden');
+  safeRenderIcons();
+  if (feedbackSubject) feedbackSubject.focus();
+}
+
+function closeFeedbackModal() {
+  if (!feedbackModal) return;
+  feedbackModal.classList.add('hidden');
+}
+
+function updateFeedbackMailto() {
+  if (!feedbackMailtoLink) return;
+  const cat = feedbackCategory ? feedbackCategory.value : 'Feedback';
+  const subj = feedbackSubject && feedbackSubject.value.trim() ? feedbackSubject.value.trim() : 'StoreStock Feedback';
+  const bodyText = feedbackMessage && feedbackMessage.value.trim() ? feedbackMessage.value.trim() : '';
+  const currentCountry = countrySelect ? countrySelect.value : 'RO';
+  const currentCity = currentLocationLabel ? currentLocationLabel.textContent.trim() : 'Unknown';
+  const query = searchInput ? searchInput.value.trim() : '';
+
+  const fullBody = `${bodyText}\n\n---\nClient Context:\nCountry: ${currentCountry}\nCity: ${currentCity}\nQuery: ${query}\nUser-Agent: ${navigator.userAgent}`;
+  feedbackMailtoLink.href = `mailto:feedback@polychroms.dev?subject=${encodeURIComponent(`[StoreStock ${cat}] ${subj}`)}&body=${encodeURIComponent(fullBody)}`;
+}
+
+if (openFeedbackModalBtn) {
+  openFeedbackModalBtn.addEventListener('click', openFeedbackModal);
+}
+if (openFeedbackFooterBtn) {
+  openFeedbackFooterBtn.addEventListener('click', openFeedbackModal);
+}
+if (closeFeedbackModalBtn) {
+  closeFeedbackModalBtn.addEventListener('click', closeFeedbackModal);
+}
+if (cancelFeedbackModalBtn) {
+  cancelFeedbackModalBtn.addEventListener('click', closeFeedbackModal);
+}
+if (feedbackModal) {
+  feedbackModal.addEventListener('click', (e) => {
+    if (e.target === feedbackModal) closeFeedbackModal();
+  });
+}
+
+if (feedbackCategory) feedbackCategory.addEventListener('change', updateFeedbackMailto);
+if (feedbackSubject) feedbackSubject.addEventListener('input', updateFeedbackMailto);
+if (feedbackMessage) feedbackMessage.addEventListener('input', updateFeedbackMailto);
+
+if (feedbackForm) {
+  feedbackForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const category = feedbackCategory ? feedbackCategory.value : 'General Feedback';
+    const subject = feedbackSubject ? feedbackSubject.value.trim() : '';
+    const message = feedbackMessage ? feedbackMessage.value.trim() : '';
+    const email = feedbackEmail ? feedbackEmail.value.trim() : '';
+    const country = countrySelect ? countrySelect.value : 'RO';
+    const city = currentLocationLabel ? currentLocationLabel.textContent.trim() : 'Unknown';
+    const lastQuery = searchInput ? searchInput.value.trim() : '';
+
+    if (!message) {
+      showToast("Please enter feedback details or description.", "warning");
+      return;
+    }
+
+    if (submitFeedbackBtn) {
+      submitFeedbackBtn.disabled = true;
+      submitFeedbackBtn.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Sending...</span>';
+      safeRenderIcons();
+    }
+
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category,
+          subject,
+          message,
+          email,
+          country,
+          city,
+          last_query: lastQuery
+        })
+      });
+
+      if (res.ok) {
+        closeFeedbackModal();
+        feedbackForm.reset();
+        showToast("Thank you! Feedback sent to feedback@polychroms.dev", "success");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.detail || "Could not deliver feedback. Please try again.", "error");
+      }
+    } catch (err) {
+      console.error("Feedback submission error:", err);
+      showToast("Network error. Please email feedback@polychroms.dev directly.", "error");
+    } finally {
+      if (submitFeedbackBtn) {
+        submitFeedbackBtn.disabled = false;
+        submitFeedbackBtn.innerHTML = '<i data-lucide="send" class="w-3.5 h-3.5"></i><span>Send Feedback</span>';
+        safeRenderIcons();
+      }
+    }
+  });
+}
+
 // Robust Initialization
 async function initApp() {
   try {

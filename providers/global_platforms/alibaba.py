@@ -6,6 +6,7 @@ from curl_cffi import requests
 import asyncio
 from core.schema import StoreResult, StockLevel, ProductCategory
 from providers.base import BaseProvider
+from providers.cars.auto_market import AutoMarketProvider
 
 class AlibabaProvider(BaseProvider):
     store_id = "alibaba"
@@ -33,6 +34,9 @@ class AlibabaProvider(BaseProvider):
 
     def _sync_search(self, query: str) -> List[StoreResult]:
         results: List[StoreResult] = []
+        if AutoMarketProvider.is_car_query(query):
+            return results
+
         encoded = urllib.parse.quote_plus(query)
         url = f"https://www.alibaba.com/trade/search?fsb=y&IndexArea=product_en&SearchText={encoded}"
 
@@ -104,26 +108,5 @@ class AlibabaProvider(BaseProvider):
                         )
         except Exception as e:
             print(f"[Alibaba] Error querying {query}: {e}")
-
-        # Fallback card if zero results or challenge
-        if not results:
-            results.append(
-                StoreResult(
-                    id=f"alibaba_search_{abs(hash(query)) % 100000}",
-                    store_name="Alibaba B2B",
-                    store_icon="factory",
-                    country_code=self.country_code,
-                    title=f"Wholesale & Manufacturer Sourcing for '{query}' (Alibaba)",
-                    price=0.0,
-                    currency=self.currency,
-                    in_stock=True,
-                    stock_level=StockLevel.IN_STOCK,
-                    stock_badge_text="Factory Direct / Bulk Supply",
-                    product_url=f"https://www.alibaba.com/trade/search?fsb=y&IndexArea=product_en&SearchText={encoded}",
-                    image_url="https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=300&auto=format&fit=crop&q=60",
-                    delivery_info="Trade Assurance & Factory Audit",
-                    category=ProductCategory.GENERAL
-                )
-            )
 
         return results

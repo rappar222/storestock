@@ -1,6 +1,9 @@
 import os
 import json
 import asyncio
+import smtplib
+import datetime
+from email.message import EmailMessage
 from typing import Optional
 from fastapi import FastAPI, Query, HTTPException, Body, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -115,6 +118,111 @@ async def delete_alert(alert_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Alert not found")
     return {"status": "deleted", "id": alert_id}
+
+# --- Feedback & Bug Report Endpoint ---
+
+@app.post("/api/feedback")
+async def submit_feedback(request: Request, payload: dict = Body(...)):
+    category = payload.get("category", "General Feedback").strip()
+    subject = payload.get("subject", "StoreStock User Feedback").strip()
+    message = payload.get("message", "").strip()
+    email = payload.get("email", "").strip()
+    country = payload.get("country", "").strip()
+    city = payload.get("city", "").strip()
+    last_query = payload.get("last_query", "").strip()
+    user_agent = request.headers.get("user-agent", "Unknown") if request else "Unknown"
+
+    if not message:
+        raise HTTPException(status_code=400, detail="Feedback message cannot be empty")
+
+    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    feedback_record = {
+        "timestamp": timestamp,
+        "category": category,
+        "subject": subject,
+        "message": message,
+        "email": email or "anonymous",
+        "country": country,
+        "city": city,
+        "last_query": last_query,
+        "user_agent": user_agent
+    }
+
+    # 1. Persist to data/feedback.jsonl
+    data_dir = os.path.join(os.path.dirname(__file__), "data")
+    os.makedirs(data_dir, exist_ok=True)
+    feedback_file = os.path.join(data_dir, "feedback.jsonl")
+    try:
+        with open(feedback_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(feedback_record, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(f"[Feedback] Failed to save feedback locally: {e}")
+
+    # 2. Attempt SMTP dispatch to feedback@polychroms.dev
+    target_email = "feedback@polychroms.dev"
+    smtp_host = os.environ.get("SMTP_HOST", "localhost")
+    smtp_port = int(os.environ.get("SMTP_PORT", "25"))
+    smtp_user = os.environ.get("SMTP_USER")
+    smtp_pass = os.environ.get("SMTP_PASSWORD")
+    smtp_from = os.environ.get("SMTP_FROM", email or "feedback-noreply@polychroms.dev")
+
+    email_sent = False
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = f"[StoreStock {category}] {subject}"
+        msg["From"] = smtp_from
+        msg["To"] = target_email
+        if email:
+            msg["Reply-To"] = email
+
+        email_body = f"""New StoreStock Feedback Submission:
+======================================================
+Category:   {category}
+Subject:    {subject}
+From:       {email or 'Anonymous User'}
+Date (UTC): {timestamp}
+Country:    {country or 'N/A'}
+City:       {city or 'N/A'}
+Last Query: {last_query or 'N/A'}
+
+User Agent:
+{user_agent}
+
+Message / Description:
+------------------------------------------------------
+{message}
+======================================================
+"""
+        msg.set_content(email_body)
+
+        if smtp_user and smtp_pass:
+            if smtp_port == 465:
+                with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=5) as server:
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+            else:
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=5) as server:
+                    if os.environ.get("SMTP_TLS", "true").lower() == "true":
+                        server.starttls()
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+            email_sent = True
+        else:
+            # Try unauthenticated relay
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=3) as server:
+                server.send_message(msg)
+            email_sent = True
+    except Exception as e:
+        print(f"[Feedback] Notice: Direct SMTP dispatch failed ({e}). Feedback is safely stored in {feedback_file}")
+
+    return {
+        "status": "success",
+        "saved": True,
+        "email_dispatched": email_sent,
+        "target": target_email,
+        "message": "Feedback received and stored successfully!"
+    }
 
 if __name__ == "__main__":
     import uvicorn

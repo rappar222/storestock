@@ -131,6 +131,29 @@
             <!-- Populated via JS -->
           </select>
         </div>
+
+        <!-- Download Architecture SVG Button -->
+        <a 
+          href="/static/storestock_architecture.svg" 
+          download="storestock_architecture.svg" 
+          class="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-700/60 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white transition shadow-sm"
+          title="Download Architecture SVG Scheme"
+          target="_blank"
+        >
+          <i data-lucide="network" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span class="hidden md:inline">Architecture</span>
+          <i data-lucide="download" class="w-3 h-3 text-slate-400"></i>
+        </a>
+
+        <!-- Feedback / Bug Report Button -->
+        <button 
+          id="openFeedbackModalBtn" 
+          class="flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 border border-amber-500/40 hover:border-amber-400 rounded-xl px-3 py-1.5 text-xs font-semibold text-amber-400 hover:text-amber-300 transition shadow-sm"
+          title="Send Feedback, Bug Reports & Improvements"
+        >
+          <i data-lucide="message-square-plus" class="w-3.5 h-3.5"></i>
+          <span class="hidden md:inline">Feedback</span>
+        </button>
       </div>
     </div>
   </header>
@@ -441,6 +464,108 @@
     </div>
   </div>
 
+  <!-- Feedback & Bug Report Modal -->
+  <div id="feedbackModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-lg w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
+      
+      <!-- Close button -->
+      <button id="closeFeedbackModalBtn" class="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg transition" title="Close">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+
+      <!-- Modal Header -->
+      <div class="flex items-center space-x-3">
+        <div class="h-11 w-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-400 flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
+          <i data-lucide="message-square-plus" class="w-6 h-6 text-black font-bold"></i>
+        </div>
+        <div>
+          <h3 class="font-extrabold text-lg sm:text-xl text-white">Feedback &amp; Bug Reports</h3>
+          <p class="text-xs text-slate-400">Directly dispatched to <span class="text-amber-400 font-semibold">feedback@polychroms.dev</span></p>
+        </div>
+      </div>
+
+      <!-- Feedback Form -->
+      <form id="feedbackForm" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Feedback Category</label>
+          <select id="feedbackCategory" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-400 cursor-pointer">
+            <option value="Bug Report">🐛 Bug Report (Something is broken or inaccurate)</option>
+            <option value="Store Request">🏪 Store Request (Request a new retail store or dealership)</option>
+            <option value="Improvement">💡 Improvement / Feature Suggestion</option>
+            <option value="General Feedback">💬 General Feedback</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Subject</label>
+          <input 
+            type="text" 
+            id="feedbackSubject" 
+            required 
+            placeholder="e.g. Temu search issue / Add Carrefour to Romania" 
+            class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-400 placeholder-slate-500" 
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Your Email (Optional, if you'd like a follow-up)</label>
+          <input 
+            type="email" 
+            id="feedbackEmail" 
+            placeholder="your-name@example.com" 
+            class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-400 placeholder-slate-500" 
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Message &amp; Details</label>
+          <textarea 
+            id="feedbackMessage" 
+            rows="4" 
+            required 
+            placeholder="Describe what happened, steps to reproduce, or the feature you want..." 
+            class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs text-white outline-none focus:border-amber-400 placeholder-slate-500 custom-scrollbar resize-none"
+          ></textarea>
+        </div>
+
+        <!-- Auto-diagnostic notice -->
+        <div class="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-between text-[11px] text-slate-400">
+          <span class="flex items-center gap-1.5">
+            <i data-lucide="info" class="w-3.5 h-3.5 text-cyan-400"></i>
+            Auto-attaching current city, country &amp; search query
+          </span>
+          <span id="feedbackDiagnosticsPreview" class="text-slate-400 font-mono text-[10px]"></span>
+        </div>
+
+        <!-- Buttons -->
+        <div class="pt-2 flex items-center justify-between">
+          <a 
+            id="feedbackMailtoLink" 
+            href="mailto:feedback@polychroms.dev" 
+            class="text-[11px] text-slate-400 hover:text-amber-400 underline transition"
+            target="_blank"
+          >
+            Open in Email App →
+          </a>
+          <div class="flex items-center space-x-2">
+            <button type="button" id="cancelFeedbackModalBtn" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 transition cursor-pointer">
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              id="submitFeedbackBtn" 
+              class="px-5 py-2 rounded-xl text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 transition shadow-md shadow-amber-500/20 flex items-center space-x-1.5 cursor-pointer"
+            >
+              <i data-lucide="send" class="w-3.5 h-3.5"></i>
+              <span>Send Feedback</span>
+            </button>
+          </div>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
   <!-- On-Screen JS Error Diagnostics Banner -->
   <div id="jsErrorBanner" class="hidden fixed top-0 left-0 right-0 z-[9999] bg-rose-600 text-white p-3 text-xs font-mono font-bold shadow-2xl flex items-center justify-between"></div>
 
@@ -452,9 +577,32 @@
 
   <!-- Footer -->
   <footer class="border-t border-slate-800/80 bg-slate-950 py-6 text-center text-xs text-slate-500 mt-auto">
-    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
       <div>StoreStock Multi-Engine • eMAG, Altex, Amazon, Temu, AliExpress, Alibaba, Micro Center, Best Buy, Scorptec</div>
-      <div class="text-slate-400">Interactive Store Map & Restock Tracker Active</div>
+      <div class="flex items-center space-x-3">
+        <button 
+          id="openFeedbackFooterBtn" 
+          class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/60 text-slate-300 hover:text-amber-400 font-semibold transition"
+          title="Send Feedback, Report Bug, or Request Store"
+        >
+          <i data-lucide="message-square-plus" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Feedback &amp; Bugs</span>
+        </button>
+        <span class="text-slate-400 hidden sm:inline">•</span>
+        <a 
+          href="/static/storestock_architecture.svg" 
+          download="storestock_architecture.svg" 
+          class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/60 text-slate-300 hover:text-cyan-400 font-semibold transition"
+          target="_blank"
+          title="Download SVG Architecture Diagram"
+        >
+          <i data-lucide="network" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span>Architecture Scheme (SVG)</span>
+          <i data-lucide="download" class="w-3 h-3 text-slate-400"></i>
+        </a>
+        <span class="text-slate-400 hidden sm:inline">•</span>
+        <span class="text-slate-400">Interactive Store Map Active</span>
+      </div>
     </div>
   </footer>
 
@@ -468,6 +616,6 @@
       }
     });
   </script>
-  <script src="/static/app.js?v=3.0"></script>
+  <script src="/static/app.js?v=3.2"></script>
 </body>
 </html>

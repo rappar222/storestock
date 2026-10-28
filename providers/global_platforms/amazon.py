@@ -6,6 +6,7 @@ from curl_cffi import requests
 import asyncio
 from core.schema import StoreResult, StockLevel, ProductCategory
 from providers.base import BaseProvider
+from providers.cars.auto_market import AutoMarketProvider
 
 class AmazonProvider(BaseProvider):
     store_id = "amazon_global"
@@ -39,6 +40,8 @@ class AmazonProvider(BaseProvider):
 
     def _sync_search(self, query: str) -> List[StoreResult]:
         results: List[StoreResult] = []
+        if AutoMarketProvider.is_car_query(query):
+            return results
         encoded_query = urllib.parse.quote_plus(query)
         url = f"https://www.{self.domain}/s?k={encoded_query}"
 
