@@ -19,6 +19,9 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+  <!-- html2canvas for instant feedback screenshots -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -528,13 +531,46 @@
           ></textarea>
         </div>
 
-        <!-- Auto-diagnostic notice -->
-        <div class="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/50 flex items-center justify-between text-[11px] text-slate-400">
-          <span class="flex items-center gap-1.5">
-            <i data-lucide="info" class="w-3.5 h-3.5 text-cyan-400"></i>
-            Auto-attaching current city, country &amp; search query
-          </span>
-          <span id="feedbackDiagnosticsPreview" class="text-slate-400 font-mono text-[10px]"></span>
+        <!-- Location Context Toggle -->
+        <label class="flex items-center space-x-2.5 p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 cursor-pointer hover:bg-slate-800 transition">
+          <input type="checkbox" id="feedbackIncludeLocation" checked class="w-4 h-4 rounded text-emerald-500 bg-slate-900 border-slate-700 focus:ring-0 cursor-pointer" />
+          <div class="text-xs flex-1">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-slate-200">Include location context</span>
+              <span id="feedbackLocationPreview" class="text-emerald-400 font-mono text-[11px]">București, RO</span>
+            </div>
+            <span class="text-slate-400 text-[10.5px]">Helps diagnose regional store availability issues</span>
+          </div>
+        </label>
+
+        <!-- Screenshot Attachment Toggle -->
+        <div class="space-y-2">
+          <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60 cursor-pointer hover:bg-slate-800 transition">
+            <div class="flex items-center space-x-2.5">
+              <input type="checkbox" id="feedbackIncludeScreenshot" class="w-4 h-4 rounded text-cyan-500 bg-slate-900 border-slate-700 focus:ring-0 cursor-pointer" />
+              <div class="text-xs">
+                <span class="font-semibold text-slate-200">Attach screenshot of current screen</span>
+                <span class="text-slate-400 text-[10.5px] block">Captures the page behind this modal to show visual issues</span>
+              </div>
+            </div>
+            <span id="feedbackScreenshotStatus" class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-700 text-slate-300">Optional</span>
+          </label>
+
+          <!-- Screenshot preview thumbnail (hidden until captured) -->
+          <div id="feedbackScreenshotContainer" class="hidden p-2 rounded-xl bg-slate-950/80 border border-cyan-500/40 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <img id="feedbackScreenshotImg" class="h-12 w-20 object-cover rounded-lg border border-slate-700 bg-slate-900" alt="Preview" />
+              <div class="text-[11px]">
+                <div class="font-semibold text-cyan-300 flex items-center gap-1">
+                  <i data-lucide="check" class="w-3.5 h-3.5 text-cyan-400"></i> Screenshot captured
+                </div>
+                <span id="feedbackScreenshotDim" class="text-slate-500 text-[10px]">Ready to attach</span>
+              </div>
+            </div>
+            <button type="button" id="feedbackRemoveScreenshotBtn" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-rose-950 hover:text-rose-400 text-slate-400 transition cursor-pointer">
+              Remove
+            </button>
+          </div>
         </div>
 
         <!-- Buttons -->
@@ -616,6 +652,6 @@
       }
     });
   </script>
-  <script src="/static/app.js?v=3.4"></script>
+  <script src="/static/app.js?v=3.5"></script>
 </body>
 </html>

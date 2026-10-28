@@ -2020,17 +2020,24 @@ const feedbackSubject = document.getElementById('feedbackSubject');
 const feedbackEmail = document.getElementById('feedbackEmail');
 const feedbackMessage = document.getElementById('feedbackMessage');
 const submitFeedbackBtn = document.getElementById('submitFeedbackBtn');
-const feedbackDiagnosticsPreview = document.getElementById('feedbackDiagnosticsPreview');
 const feedbackMailtoLink = document.getElementById('feedbackMailtoLink');
+const feedbackIncludeLocation = document.getElementById('feedbackIncludeLocation');
+const feedbackLocationPreview = document.getElementById('feedbackLocationPreview');
+const feedbackIncludeScreenshot = document.getElementById('feedbackIncludeScreenshot');
+const feedbackScreenshotStatus = document.getElementById('feedbackScreenshotStatus');
+const feedbackScreenshotContainer = document.getElementById('feedbackScreenshotContainer');
+const feedbackScreenshotImg = document.getElementById('feedbackScreenshotImg');
+const feedbackRemoveScreenshotBtn = document.getElementById('feedbackRemoveScreenshotBtn');
+
+let currentScreenshotBase64 = null;
 
 function openFeedbackModal() {
   if (!feedbackModal) return;
   const currentCountry = countrySelect ? countrySelect.value : 'RO';
   const currentCity = currentLocationLabel ? currentLocationLabel.textContent.trim() : 'Unknown';
-  const query = searchInput ? searchInput.value.trim() : '';
 
-  if (feedbackDiagnosticsPreview) {
-    feedbackDiagnosticsPreview.textContent = `${currentCountry} • ${currentCity}${query ? ` • "${query}"` : ''}`;
+  if (feedbackLocationPreview) {
+    feedbackLocationPreview.textContent = `${currentCity}, ${currentCountry}`;
   }
 
   updateFeedbackMailto();
@@ -2052,9 +2059,95 @@ function updateFeedbackMailto() {
   const currentCountry = countrySelect ? countrySelect.value : 'RO';
   const currentCity = currentLocationLabel ? currentLocationLabel.textContent.trim() : 'Unknown';
   const query = searchInput ? searchInput.value.trim() : '';
+  const locShared = feedbackIncludeLocation ? feedbackIncludeLocation.checked : true;
 
-  const fullBody = `${bodyText}\n\n---\nClient Context:\nCountry: ${currentCountry}\nCity: ${currentCity}\nQuery: ${query}\nUser-Agent: ${navigator.userAgent}`;
+  const locInfo = locShared ? `Country: ${currentCountry}\nCity: ${currentCity}` : 'Location: Not shared by user';
+  const fullBody = `${bodyText}\n\n---\nClient Context:\n${locInfo}\nQuery: ${query}\nUser-Agent: ${navigator.userAgent}`;
   feedbackMailtoLink.href = `mailto:feedback@polychroms.dev?subject=${encodeURIComponent(`[StoreStock ${cat}] ${subj}`)}&body=${encodeURIComponent(fullBody)}`;
+}
+
+// Screenshot capture logic via html2canvas
+async function captureScreenSnippet() {
+  if (typeof html2canvas === 'undefined') {
+    showToast("Screenshot capture unavailable (script loading). Please try again in a moment.", "warning");
+    if (feedbackIncludeScreenshot) feedbackIncludeScreenshot.checked = false;
+    return;
+  }
+
+  if (feedbackScreenshotStatus) {
+    feedbackScreenshotStatus.textContent = 'Capturing...';
+    feedbackScreenshotStatus.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 animate-pulse';
+  }
+
+  try {
+    // Hide modal temporarily while capturing the background UI
+    feedbackModal.style.visibility = 'hidden';
+
+    // Small delay to ensure browser repaints without modal
+    await new Promise(r => setTimeout(r, 60));
+
+    const canvas = await html2canvas(document.body, {
+      logging: false,
+      useCORS: true,
+      scale: 0.85
+    });
+
+    feedbackModal.style.visibility = 'visible';
+
+    // Compress to JPEG 0.70 to keep payload lightweight (< 150KB)
+    currentScreenshotBase64 = canvas.toDataURL('image/jpeg', 0.70);
+
+    if (feedbackScreenshotImg) {
+      feedbackScreenshotImg.src = currentScreenshotBase64;
+    }
+    if (feedbackScreenshotContainer) {
+      feedbackScreenshotContainer.classList.remove('hidden');
+    }
+    if (feedbackScreenshotStatus) {
+      feedbackScreenshotStatus.textContent = 'Attached';
+      feedbackScreenshotStatus.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300';
+    }
+    safeRenderIcons();
+  } catch (err) {
+    feedbackModal.style.visibility = 'visible';
+    console.error("Screenshot capture error:", err);
+    currentScreenshotBase64 = null;
+    if (feedbackIncludeScreenshot) feedbackIncludeScreenshot.checked = false;
+    if (feedbackScreenshotContainer) feedbackScreenshotContainer.classList.add('hidden');
+    if (feedbackScreenshotStatus) {
+      feedbackScreenshotStatus.textContent = 'Failed';
+      feedbackScreenshotStatus.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300';
+    }
+    showToast("Could not capture screenshot automatically.", "warning");
+  }
+}
+
+function removeScreenshot() {
+  currentScreenshotBase64 = null;
+  if (feedbackIncludeScreenshot) {
+    feedbackIncludeScreenshot.checked = false;
+  }
+  if (feedbackScreenshotContainer) {
+    feedbackScreenshotContainer.classList.add('hidden');
+  }
+  if (feedbackScreenshotStatus) {
+    feedbackScreenshotStatus.textContent = 'Optional';
+    feedbackScreenshotStatus.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-slate-700 text-slate-300';
+  }
+}
+
+if (feedbackIncludeScreenshot) {
+  feedbackIncludeScreenshot.addEventListener('change', (e) => {
+    if (e.target.checked) {
+      captureScreenSnippet();
+    } else {
+      removeScreenshot();
+    }
+  });
+}
+
+if (feedbackRemoveScreenshotBtn) {
+  feedbackRemoveScreenshotBtn.addEventListener('click', removeScreenshot);
 }
 
 if (openFeedbackModalBtn) {
@@ -2078,66 +2171,54 @@ if (feedbackModal) {
 if (feedbackCategory) feedbackCategory.addEventListener('change', updateFeedbackMailto);
 if (feedbackSubject) feedbackSubject.addEventListener('input', updateFeedbackMailto);
 if (feedbackMessage) feedbackMessage.addEventListener('input', updateFeedbackMailto);
+if (feedbackIncludeLocation) feedbackIncludeLocation.addEventListener('change', updateFeedbackMailto);
 
 if (feedbackForm) {
-  feedbackForm.addEventListener('submit', async (e) => {
+  feedbackForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const category = feedbackCategory ? feedbackCategory.value : 'General Feedback';
     const subject = feedbackSubject ? feedbackSubject.value.trim() : '';
     const message = feedbackMessage ? feedbackMessage.value.trim() : '';
     const email = feedbackEmail ? feedbackEmail.value.trim() : '';
+    const includeLocation = feedbackIncludeLocation ? feedbackIncludeLocation.checked : true;
     const country = countrySelect ? countrySelect.value : 'RO';
     const city = currentLocationLabel ? currentLocationLabel.textContent.trim() : 'Unknown';
     const lastQuery = searchInput ? searchInput.value.trim() : '';
+    const screenshot = currentScreenshotBase64;
 
     if (!message) {
       showToast("Please enter feedback details or description.", "warning");
       return;
     }
 
-    if (submitFeedbackBtn) {
-      submitFeedbackBtn.disabled = true;
-      submitFeedbackBtn.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Sending...</span>';
-      safeRenderIcons();
-    }
+    // 1. Instantly close modal and reset for seamless UX (don't make user wait!)
+    closeFeedbackModal();
+    feedbackForm.reset();
+    removeScreenshot();
+    showToast("Thank you! Feedback & screenshot are sending in the background.", "success");
 
-    try {
-      const res = await fetch('/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          category,
-          subject,
-          message,
-          email,
-          country,
-          city,
-          last_query: lastQuery
-        })
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        closeFeedbackModal();
-        feedbackForm.reset();
-        if (data.email_dispatched) {
-          showToast(data.message || "Feedback sent to feedback@polychroms.dev!", "success");
-        } else {
-          showToast(data.note || "Feedback saved on server!", "warning");
-        }
-      } else {
-        showToast(data.detail || "Could not deliver feedback. Please try again.", "error");
+    // 2. Fire request asynchronously in the background
+    fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category,
+        subject,
+        message,
+        email,
+        include_location: includeLocation,
+        country: includeLocation ? country : "Not shared",
+        city: includeLocation ? city : "Not shared",
+        last_query: lastQuery,
+        screenshot: screenshot
+      })
+    }).then(async (res) => {
+      if (!res.ok) {
+        console.warn("Background feedback delivery reported non-200 status:", res.status);
       }
-    } catch (err) {
-      console.error("Feedback submission error:", err);
-      showToast("Network error. Please email feedback@polychroms.dev directly.", "error");
-    } finally {
-      if (submitFeedbackBtn) {
-        submitFeedbackBtn.disabled = false;
-        submitFeedbackBtn.innerHTML = '<i data-lucide="send" class="w-3.5 h-3.5"></i><span>Send Feedback</span>';
-        safeRenderIcons();
-      }
-    }
+    }).catch(err => {
+      console.error("Background feedback dispatch error:", err);
+    });
   });
 }
 

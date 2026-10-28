@@ -4,9 +4,10 @@ import asyncio
 import smtplib
 import datetime
 import httpx
+import base64
 from email.message import EmailMessage
 from typing import Optional
-from fastapi import FastAPI, Query, HTTPException, Body, Request
+from fastapi import FastAPI, Query, HTTPException, Body, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -120,17 +121,134 @@ async def delete_alert(alert_id: str):
         raise HTTPException(status_code=404, detail="Alert not found")
     return {"status": "deleted", "id": alert_id}
 
-# --- Feedback & Bug Report Endpoint ---
+# --- Feedback & Bug Report Background Dispatch Task ---
+
+def send_feedback_email_task(feedback_record: dict, screenshot_b64: Optional[str] = None):
+    category = feedback_record.get("category", "General Feedback")
+    subject = feedback_record.get("subject", "StoreStock User Feedback")
+    message = feedback_record.get("message", "")
+    email = feedback_record.get("email", "")
+    country = feedback_record.get("country", "Not shared")
+    city = feedback_record.get("city", "Not shared")
+    last_query = feedback_record.get("last_query", "N/A")
+    user_agent = feedback_record.get("user_agent", "Unknown")
+    timestamp = feedback_record.get("timestamp", "")
+    include_location = feedback_record.get("include_location", True)
+
+    location_str = f"{city}, {country}" if include_location and (city or country) else "Not shared by user"
+
+    target_email = "feedback@polychroms.dev"
+    smtp_host = os.environ.get("SMTP_HOST", "smtp.gmail.com").strip()
+    smtp_user = os.environ.get("SMTP_USER", "rappar2018@gmail.com").strip()
+    smtp_pass = os.environ.get("SMTP_PASSWORD", "pfklqccstismrxyy").replace(" ", "").strip()
+    smtp_port = int(str(os.environ.get("SMTP_PORT", 587)).strip())
+    smtp_from = os.environ.get("SMTP_FROM", "rappar2018@gmail.com").strip()
+
+    has_screenshot = bool(screenshot_b64)
+    screenshot_note = "Attached (see screenshot below)" if has_screenshot else "None attached"
+
+    email_sent = False
+
+    # Strategy A: Deliver via authenticated Gmail SMTP with optional screenshot
+    if smtp_host and smtp_user and smtp_pass:
+        try:
+            msg = EmailMessage()
+            msg["Subject"] = f"[StoreStock {category}] {subject}"
+            msg["From"] = smtp_from
+            recipients = [target_email, "rappar2018@gmail.com"]
+            msg["To"] = ", ".join(recipients)
+            if email and email != "anonymous":
+                msg["Reply-To"] = email
+
+            email_body = f"""New StoreStock Feedback Submission:
+======================================================
+Category:    {category}
+Subject:     {subject}
+From:        {email or 'Anonymous User'}
+Date (UTC):  {timestamp}
+Location:    {location_str}
+Last Query:  {last_query or 'N/A'}
+Screenshot:  {screenshot_note}
+
+User Agent:
+{user_agent}
+
+Message / Description:
+------------------------------------------------------
+{message}
+======================================================
+"""
+            msg.set_content(email_body)
+
+            # Attach screenshot if provided
+            if screenshot_b64:
+                raw_b64 = screenshot_b64
+                if "," in raw_b64:
+                    raw_b64 = raw_b64.split(",", 1)[1]
+                try:
+                    img_bytes = base64.b64decode(raw_b64)
+                    msg.add_attachment(img_bytes, maintype="image", subtype="png", filename="storestock_screenshot.png")
+                    print(f"[Feedback] Attached screenshot ({len(img_bytes)} bytes) to email.")
+                except Exception as ex:
+                    print(f"[Feedback] Could not decode screenshot attachment: {ex}")
+
+            import ssl
+            ssl_context = ssl.create_default_context()
+
+            if smtp_port == 465:
+                with smtplib.SMTP_SSL(smtp_host, smtp_port, context=ssl_context, timeout=12) as server:
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+            else:
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=12) as server:
+                    server.ehlo()
+                    server.starttls(context=ssl_context)
+                    server.ehlo()
+                    server.login(smtp_user, smtp_pass)
+                    server.send_message(msg)
+            email_sent = True
+            print(f"[Feedback] Background SMTP email sent successfully to {recipients}")
+        except Exception as e:
+            print(f"[Feedback SMTP ERROR in background task] {type(e).__name__}: {e}")
+
+    # Strategy B: Fallback HTTPS FormSubmit
+    if not email_sent:
+        try:
+            with httpx.Client(timeout=12.0) as client:
+                client.post(
+                    f"https://formsubmit.co/ajax/{target_email}",
+                    json={
+                        "name": f"StoreStock Feedback ({category})",
+                        "email": email or "anonymous-user@storestock.app",
+                        "_subject": f"[StoreStock {category}] {subject}",
+                        "Category": category,
+                        "Subject": subject,
+                        "Sender_Email": email or "Not provided",
+                        "Location": location_str,
+                        "Last_Query": last_query or "N/A",
+                        "Message": message,
+                        "Screenshot_Attached": "Yes" if has_screenshot else "No",
+                        "User_Agent": user_agent,
+                        "_template": "table"
+                    },
+                    headers={"Content-Type": "application/json", "Accept": "application/json"}
+                )
+        except Exception as e:
+            print(f"[Feedback] Fallback HTTPS email error: {e}")
+
+# --- Fast Feedback API Endpoint ---
 
 @app.post("/api/feedback")
-async def submit_feedback(request: Request, payload: dict = Body(...)):
+async def submit_feedback(request: Request, background_tasks: BackgroundTasks, payload: dict = Body(...)):
     category = payload.get("category", "General Feedback").strip()
     subject = payload.get("subject", "StoreStock User Feedback").strip()
     message = payload.get("message", "").strip()
     email = payload.get("email", "").strip()
-    country = payload.get("country", "").strip()
-    city = payload.get("city", "").strip()
+    include_location = bool(payload.get("include_location", True))
+    country = payload.get("country", "").strip() if include_location else "Not shared"
+    city = payload.get("city", "").strip() if include_location else "Not shared"
     last_query = payload.get("last_query", "").strip()
+    screenshot_b64 = payload.get("screenshot")
     user_agent = request.headers.get("user-agent", "Unknown") if request else "Unknown"
 
     if not message:
@@ -144,13 +262,15 @@ async def submit_feedback(request: Request, payload: dict = Body(...)):
         "subject": subject,
         "message": message,
         "email": email or "anonymous",
+        "include_location": include_location,
         "country": country,
         "city": city,
         "last_query": last_query,
+        "has_screenshot": bool(screenshot_b64),
         "user_agent": user_agent
     }
 
-    # 1. Persist to data/feedback.jsonl
+    # 1. Immediately log to data/feedback.jsonl (<1ms)
     data_dir = os.path.join(os.path.dirname(__file__), "data")
     os.makedirs(data_dir, exist_ok=True)
     feedback_file = os.path.join(data_dir, "feedback.jsonl")
@@ -160,115 +280,13 @@ async def submit_feedback(request: Request, payload: dict = Body(...)):
     except Exception as e:
         print(f"[Feedback] Failed to save feedback locally: {e}")
 
-    target_email = "feedback@polychroms.dev"
-    smtp_host = os.environ.get("SMTP_HOST", "smtp.gmail.com").strip()
-    smtp_user = os.environ.get("SMTP_USER", "rappar2018@gmail.com").strip()
-    smtp_pass = os.environ.get("SMTP_PASSWORD", "pfklqccstismrxyy").replace(" ", "").strip()
-    smtp_port = int(str(os.environ.get("SMTP_PORT", 587)).strip())
-    smtp_from = os.environ.get("SMTP_FROM", "rappar2018@gmail.com").strip()
-
-    email_sent = False
-    delivery_note = ""
-
-    # Strategy A: Deliver via authenticated SMTP (Gmail TLS)
-    if smtp_host and smtp_user and smtp_pass:
-        try:
-            msg = EmailMessage()
-            msg["Subject"] = f"[StoreStock {category}] {subject}"
-            msg["From"] = smtp_from
-            # Deliver to both feedback@polychroms.dev and your Gmail inbox directly
-            recipients = [target_email, "rappar2018@gmail.com"]
-            msg["To"] = ", ".join(recipients)
-            if email:
-                msg["Reply-To"] = email
-
-            email_body = f"""New StoreStock Feedback Submission:
-======================================================
-Category:   {category}
-Subject:    {subject}
-From:       {email or 'Anonymous User'}
-Date (UTC): {timestamp}
-Country:    {country or 'N/A'}
-City:       {city or 'N/A'}
-Last Query: {last_query or 'N/A'}
-
-User Agent:
-{user_agent}
-
-Message / Description:
-------------------------------------------------------
-{message}
-======================================================
-"""
-            msg.set_content(email_body)
-
-            import ssl
-            ssl_context = ssl.create_default_context()
-
-            if smtp_port == 465:
-                with smtplib.SMTP_SSL(smtp_host, smtp_port, context=ssl_context, timeout=10) as server:
-                    server.login(smtp_user, smtp_pass)
-                    server.send_message(msg)
-            else:
-                with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
-                    server.ehlo()
-                    server.starttls(context=ssl_context)
-                    server.ehlo()
-                    server.login(smtp_user, smtp_pass)
-                    server.send_message(msg)
-            email_sent = True
-            delivery_note = "Delivered via Gmail SMTP directly to your inbox and feedback@polychroms.dev!"
-            print(f"[Feedback] Successfully sent feedback email via {smtp_host} to {recipients}")
-        except Exception as e:
-            print(f"[Feedback SMTP ERROR] {type(e).__name__}: {e}")
-            delivery_note = f"SMTP error: {e}"
-
-    # Strategy B: Direct HTTPS FormSubmit API (bypasses ISP port 25 blocking and works out of the box)
-    if not email_sent:
-        try:
-            async with httpx.AsyncClient(timeout=12.0) as client:
-                resp = await client.post(
-                    f"https://formsubmit.co/ajax/{target_email}",
-                    json={
-                        "name": f"StoreStock Feedback ({category})",
-                        "email": email or "anonymous-user@storestock.app",
-                        "_subject": f"[StoreStock {category}] {subject}",
-                        "Category": category,
-                        "Subject": subject,
-                        "Sender_Email": email or "Not provided",
-                        "Country": country or "N/A",
-                        "City": city or "N/A",
-                        "Last_Query": last_query or "N/A",
-                        "Message": message,
-                        "User_Agent": user_agent,
-                        "_template": "table"
-                    },
-                    headers={
-                        "Content-Type": "application/json",
-                        "Accept": "application/json",
-                        "User-Agent": "StoreStock-Backend/3.0"
-                    }
-                )
-                if resp.status_code == 200:
-                    data = resp.json()
-                    email_sent = True
-                    msg_text = data.get("message", "")
-                    if "Activate" in msg_text or "activation" in msg_text.lower():
-                        delivery_note = f"Activation email sent to {target_email}. Please check inbox to approve first-time submissions!"
-                    else:
-                        delivery_note = "Successfully sent to feedback@polychroms.dev via HTTPS email dispatch."
-                else:
-                    print(f"[Feedback] FormSubmit HTTP {resp.status_code}: {resp.text}")
-        except Exception as e:
-            print(f"[Feedback] HTTPS email dispatch error: {e}")
+    # 2. Asynchronously dispatch the email & screenshot in background so the user does NOT wait!
+    background_tasks.add_task(send_feedback_email_task, feedback_record, screenshot_b64)
 
     return {
-        "status": "success" if email_sent else "saved_locally",
+        "status": "success",
         "saved": True,
-        "email_dispatched": email_sent,
-        "target": target_email,
-        "note": delivery_note or f"Feedback stored locally in {feedback_file}. You can also email {target_email} directly.",
-        "message": delivery_note or "Feedback received and saved!"
+        "message": "Feedback submitted! It is being delivered in the background."
     }
 
 if __name__ == "__main__":
