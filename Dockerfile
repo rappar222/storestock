@@ -1,5 +1,5 @@
 # Stage 1: Compile High-Speed Rust Axum Gateway Binary
-FROM rust:1.80-slim as rust-builder
+FROM rust:slim as rust-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
