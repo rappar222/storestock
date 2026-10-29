@@ -361,13 +361,13 @@ class SearchEngine:
                     results=cached_results
                 )
 
-        providers = self.get_providers_for_query(query, country_code)
+        providers = self.get_providers_for_country(country_code)
         
         # Determine queries: primary query + top AI synonym if applicable
         synonyms = ai_intent.get("synonyms", [])
         alt_query = synonyms[0] if synonyms and synonyms[0].lower() != query.lower().strip() else None
 
-        STORE_TIMEOUT_SECONDS = 0.95
+        STORE_TIMEOUT_SECONDS = 8.0
 
         async def query_provider(p: BaseProvider):
             try:
@@ -383,26 +383,12 @@ class SearchEngine:
                     except Exception:
                         pass
                 return res
-            except asyncio.TimeoutError:
-                print(f"[SearchEngine] Store '{p.store_name}' exceeded {STORE_TIMEOUT_SECONDS}s SLA timeout, skipping.")
-                return []
             except Exception as e:
                 print(f"[SearchEngine] Store '{p.store_name}' error: {e}")
                 return []
 
-        MAX_SEARCH_BUDGET = 0.48
-
         tasks = [asyncio.create_task(query_provider(p)) for p in providers]
-        done, pending = await asyncio.wait(tasks, timeout=MAX_SEARCH_BUDGET)
-        for t in pending:
-            t.cancel()
-
-        responses = []
-        for t in done:
-            try:
-                responses.append(t.result())
-            except Exception:
-                pass
+        responses = await asyncio.gather(*tasks, return_exceptions=True)
 
         all_results: List[StoreResult] = []
         stores_searched: List[str] = []
@@ -464,7 +450,7 @@ class SearchEngine:
         user_lon: Optional[float] = None
     ) -> AsyncGenerator[Dict, None]:
         country_code = country_code.upper()
-        providers = self.get_providers_for_query(query, country_code)
+        providers = self.get_providers_for_country(country_code)
         ai_intent = analyze_user_intent(query)
 
         # First yield the AI Intent detection payload to the UI
@@ -497,7 +483,7 @@ class SearchEngine:
         synonyms = ai_intent.get("synonyms", [])
         alt_query = synonyms[0] if synonyms and synonyms[0].lower() != query.lower().strip() else None
 
-        STORE_STREAM_TIMEOUT = 0.85
+        STORE_STREAM_TIMEOUT = 8.0
 
         async def run_provider(provider: BaseProvider):
             start_p = time.time()
@@ -530,14 +516,6 @@ class SearchEngine:
                     "elapsed_ms": round((time.time() - start_p) * 1000, 1),
                     "items": [r.model_dump() for r in res]
                 }
-            except asyncio.TimeoutError:
-                return {
-                    "store_name": provider.store_name,
-                    "store_icon": provider.store_icon,
-                    "elapsed_ms": round((time.time() - start_p) * 1000, 1),
-                    "error": f"Exceeded {STORE_STREAM_TIMEOUT}s timeout budget",
-                    "items": []
-                }
             except Exception as e:
                 return {
                     "store_name": provider.store_name,
@@ -547,37 +525,25 @@ class SearchEngine:
                     "items": []
                 }
 
-        MAX_STREAM_BUDGET = 0.50  # Hard 500ms ceiling
-        start_fanout = time.time()
         tasks = [asyncio.create_task(run_provider(p)) for p in providers]
         cached_items_to_save: List[StoreResult] = []
 
-        try:
-            for coro in asyncio.as_completed(tasks):
-                time_left = MAX_STREAM_BUDGET - (time.time() - start_fanout)
-                if time_left <= 0:
-                    break
-                try:
-                    res = await asyncio.wait_for(coro, timeout=time_left)
-                    if res:
-                        yield {
-                            "type": "provider_result",
-                            "payload": res
-                        }
-                        if res.get("items"):
-                            for it_data in res["items"]:
-                                try:
-                                    cached_items_to_save.append(StoreResult(**it_data))
-                                except Exception:
-                                    pass
-                except asyncio.TimeoutError:
-                    break
-                except Exception:
-                    pass
-        finally:
-            for t in tasks:
-                if not t.done():
-                    t.cancel()
+        for coro in asyncio.as_completed(tasks):
+            try:
+                res = await coro
+                if res and (res.get("items") or res.get("error")):
+                    yield {
+                        "type": "provider_result",
+                        "payload": res
+                    }
+                    if res.get("items"):
+                        for it_data in res["items"]:
+                            try:
+                                cached_items_to_save.append(StoreResult(**it_data))
+                            except Exception:
+                                pass
+            except Exception:
+                pass
 
         # Cache results in memory
         if cached_items_to_save:
