@@ -1320,6 +1320,126 @@ function renderInitialWelcomeState() {
   safeRenderIcons();
 }
 
+// Progressive Multi-Stage Latency & Deferred Image Timing State
+let currentSearchBatchId = 0;
+let imageLoadingTimeoutTimer = null;
+let timingStats = {
+  batchId: 0,
+  searchStartTime: 0,
+  dataReadyTime: 0,
+  dataElapsed: null,
+  imagesStartTime: 0,
+  imagesDoneTime: 0,
+  imagesElapsed: null,
+  totalImages: 0,
+  loadedImages: 0,
+  streamDone: false,
+};
+
+function renderLatencyDisplay() {
+  if (!latencyStat) return;
+
+  const now = performance.now();
+  const dataMs = timingStats.dataElapsed !== null 
+    ? `${timingStats.dataElapsed}ms` 
+    : (timingStats.searchStartTime ? `${Math.round(now - timingStats.searchStartTime)}ms...` : '...');
+
+  let imgBadge = '';
+  if (timingStats.imagesElapsed !== null) {
+    imgBadge = `<span class="text-sky-400 font-bold">🖼️ Pictures: ${timingStats.imagesElapsed}ms</span>`;
+  } else if (timingStats.totalImages > 0) {
+    const elapsedSoFar = timingStats.imagesStartTime ? Math.round(now - timingStats.imagesStartTime) : 0;
+    imgBadge = `<span class="text-sky-300 font-medium">🖼️ Pictures: ${timingStats.loadedImages}/${timingStats.totalImages} (${elapsedSoFar}ms)...</span>`;
+  } else {
+    imgBadge = `<span class="text-slate-400">🖼️ Pictures: pending</span>`;
+  }
+
+  let totalBadge = '';
+  if (timingStats.streamDone && timingStats.imagesElapsed !== null) {
+    const totalMs = Math.round(Math.max(timingStats.dataReadyTime, timingStats.imagesDoneTime) - timingStats.searchStartTime);
+    totalBadge = `<span class="text-white font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-lg shadow-sm">⏱️ Total: ${totalMs}ms</span>`;
+  } else if (timingStats.streamDone) {
+    totalBadge = `<span class="text-slate-400">⏱️ Total: loading pictures...</span>`;
+  } else {
+    totalBadge = `<span class="text-slate-400">⏱️ Total: searching...</span>`;
+  }
+
+  latencyStat.innerHTML = `
+    <span class="inline-flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs">
+      <span class="text-emerald-400 font-bold">⚡ Text & Prices: ${dataMs}</span>
+      <span class="text-slate-600">|</span>
+      ${imgBadge}
+      <span class="text-slate-600">|</span>
+      ${totalBadge}
+    </span>
+  `;
+}
+
+function triggerDeferredImageLoading() {
+  const pendingImages = document.querySelectorAll('.deferred-product-img[data-src]');
+  if (pendingImages.length === 0) return;
+
+  const thisBatchId = timingStats.batchId;
+  timingStats.totalImages = pendingImages.length;
+  timingStats.loadedImages = 0;
+  if (!timingStats.imagesStartTime) {
+    timingStats.imagesStartTime = performance.now();
+  }
+  timingStats.imagesDoneTime = 0;
+  timingStats.imagesElapsed = null;
+  renderLatencyDisplay();
+
+  if (imageLoadingTimeoutTimer) clearTimeout(imageLoadingTimeoutTimer);
+
+  // Safety ceiling: finalize pictures after 3 seconds so the counter never hangs on slow 3rd-party CDNs
+  imageLoadingTimeoutTimer = setTimeout(() => {
+    if (timingStats.batchId === thisBatchId && timingStats.imagesElapsed === null) {
+      timingStats.imagesDoneTime = performance.now();
+      timingStats.imagesElapsed = Math.round(timingStats.imagesDoneTime - timingStats.imagesStartTime);
+      renderLatencyDisplay();
+    }
+  }, 3000);
+
+  // Micro-delay (requestAnimationFrame) to guarantee the browser paints text & prices first
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      pendingImages.forEach(img => {
+        const targetUrl = img.getAttribute('data-src');
+        if (!targetUrl) return;
+        img.removeAttribute('data-src');
+
+        const handleImageFinish = () => {
+          if (timingStats.batchId !== thisBatchId) return;
+          timingStats.loadedImages++;
+          img.classList.remove('opacity-0');
+          const skeleton = img.previousElementSibling;
+          if (skeleton && skeleton.classList.contains('img-skeleton')) {
+            skeleton.style.opacity = '0';
+          }
+
+          if (timingStats.loadedImages >= timingStats.totalImages) {
+            if (imageLoadingTimeoutTimer) clearTimeout(imageLoadingTimeoutTimer);
+            timingStats.imagesDoneTime = performance.now();
+            timingStats.imagesElapsed = Math.round(timingStats.imagesDoneTime - timingStats.imagesStartTime);
+            renderLatencyDisplay();
+          } else {
+            renderLatencyDisplay();
+          }
+        };
+
+        img.onload = handleImageFinish;
+        img.onerror = function() {
+          this.onerror = null;
+          this.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='1.5'><rect width='18' height='18' x='3' y='3' rx='2'/><circle cx='9' cy='9' r='2'/><path d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/></svg>";
+          handleImageFinish();
+        };
+
+        img.src = targetUrl;
+      });
+    }, 25);
+  });
+}
+
 // Live Streaming Search via SSE
 function executeSearch(query) {
   if (!query || !query.trim()) {
@@ -1346,9 +1466,25 @@ function executeSearch(query) {
 
   inStockStat.textContent = 'Checking stock...';
   totalFoundStat.textContent = 'Searching stores...';
-  latencyStat.textContent = '...';
 
+  currentSearchBatchId++;
+  const thisBatchId = currentSearchBatchId;
   const startTime = performance.now();
+
+  timingStats = {
+    batchId: thisBatchId,
+    searchStartTime: startTime,
+    dataReadyTime: 0,
+    dataElapsed: null,
+    imagesStartTime: 0,
+    imagesDoneTime: 0,
+    imagesElapsed: null,
+    totalImages: 0,
+    loadedImages: 0,
+    streamDone: false,
+  };
+  renderLatencyDisplay();
+
   let url = `/api/stream?q=${encodeURIComponent(query.trim())}&country=${country}`;
   if (userCoords) {
     url += `&lat=${userCoords.lat}&lon=${userCoords.lon}`;
@@ -1375,8 +1511,10 @@ function executeSearch(query) {
       } else if (data.type === 'done') {
         eventSource.close();
         loadingIndicator.classList.add('hidden');
-        const elapsed = Math.round(performance.now() - startTime);
-        latencyStat.textContent = `${elapsed}ms total`;
+        timingStats.streamDone = true;
+        timingStats.dataReadyTime = performance.now();
+        timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
+        renderLatencyDisplay();
         updateStats();
 
         if (currentResults.length === 0) {
@@ -1391,6 +1529,12 @@ function executeSearch(query) {
   eventSource.onerror = (err) => {
     eventSource.close();
     loadingIndicator.classList.add('hidden');
+    timingStats.streamDone = true;
+    if (timingStats.dataElapsed === null) {
+      timingStats.dataReadyTime = performance.now();
+      timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
+    }
+    renderLatencyDisplay();
     updateStats();
     if (currentResults.length === 0) {
       emptyState.classList.remove('hidden');
@@ -1698,15 +1842,14 @@ function renderResults() {
 
         <div class="relative w-full h-40 rounded-xl bg-slate-900/80 overflow-hidden flex items-center justify-center p-2 group-hover:scale-[1.02] transition">
           <!-- Progressive Loading Skeleton Placeholder -->
-          <div class="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-800/80 to-slate-900 animate-pulse pointer-events-none transition-opacity duration-300"></div>
+          <div class="img-skeleton absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-800/80 to-slate-900 animate-pulse pointer-events-none transition-opacity duration-300"></div>
           <img 
-            src="${imgUrl}" 
-            alt="${item.title}" 
-            class="max-h-full max-w-full object-contain opacity-0 transition-opacity duration-300 relative z-10" 
+            data-src="${imgUrl}" 
+            src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'></svg>" 
+            alt="${item.title.replace(/"/g, '&quot;')}" 
+            class="deferred-product-img max-h-full max-w-full object-contain opacity-0 transition-opacity duration-300 relative z-10" 
             loading="lazy" 
             decoding="async"
-            onload="this.classList.remove('opacity-0'); if (this.previousElementSibling) this.previousElementSibling.style.opacity = '0';"
-            onerror="this.onerror=null;this.classList.remove('opacity-0');if (this.previousElementSibling) this.previousElementSibling.style.opacity = '0';this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23475569\' stroke-width=\'1.5\'><rect width=\'18\' height=\'18\' x=\'3\' y=\'3\' rx=\'2\'/><circle cx=\'9\' cy=\'9\' r=\'2\'/><path d=\'m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\'/></svg>'"
           />
         </div>
 
@@ -1754,6 +1897,7 @@ function renderResults() {
   });
 
   safeRenderIcons();
+  triggerDeferredImageLoading();
 }
 
 // Leaflet Map Logic (100% Free OpenStreetMap - Zero API Key Required)
@@ -2016,6 +2160,7 @@ function switchView(view) {
     loadAlerts();
   }
   safeRenderIcons();
+  triggerDeferredImageLoading();
 }
 
 viewGridBtn.onclick = () => switchView('grid');

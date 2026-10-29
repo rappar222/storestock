@@ -19,7 +19,12 @@ trap cleanup SIGINT SIGTERM EXIT
 
 # 1. Start Python Scraper Engine on internal port 8001
 echo "🐍 Starting Python Scraper Engine (curl_cffi / 21 Countries) on internal port 8001..."
-python3 server.py 8001 &
+if [ -f "./venv/bin/python" ]; then
+  PYTHON="./venv/bin/python"
+else
+  PYTHON="python3"
+fi
+$PYTHON server.py 8001 &
 PY_PID=$!
 
 # Wait briefly for Python worker to bind
