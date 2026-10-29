@@ -1561,9 +1561,53 @@ function executeSearch(query) {
   };
   renderLatencyDisplay();
 
-  let url = `/api/stream?q=${encodeURIComponent(query.trim())}&country=${country}`;
+  // Request TrueNAS instant database cache only (0 server outbound scrapes)
+  let url = `/api/stream?q=${encodeURIComponent(query.trim())}&country=${country}&cached_only=true`;
   if (userCoords) {
     url += `&lat=${userCoords.lat}&lon=${userCoords.lon}`;
+  }
+
+  // Execute client-side scrapers in parallel directly from user browser!
+  if (window.StoreStockClientSearch) {
+    window.StoreStockClientSearch.searchAll(query.trim(), country, (p) => {
+      if (thisBatchId !== currentSearchBatchId) return;
+      renderStorePill(p.store_name, p.items.length, p.elapsed_ms, p.items || [], false);
+      if (p.items && p.items.length > 0) {
+        const urlMap = new Map(currentResults.map((r, idx) => [r.product_url, idx]));
+        p.items.forEach(newItem => {
+          if (urlMap.has(newItem.product_url)) {
+            const idx = urlMap.get(newItem.product_url);
+            currentResults[idx] = newItem;
+          } else {
+            currentResults.push(newItem);
+            urlMap.set(newItem.product_url, currentResults.length - 1);
+          }
+        });
+        if (timingStats.dataElapsed === null) {
+          timingStats.dataReadyTime = performance.now();
+          timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
+          renderLatencyDisplay();
+        }
+        renderResults();
+        renderBrandChips();
+        updateMapMarkers();
+        updateStats();
+      }
+    }).finally(() => {
+      if (thisBatchId === currentSearchBatchId) {
+        loadingIndicator.classList.add('hidden');
+        timingStats.streamDone = true;
+        if (timingStats.dataElapsed === null) {
+          timingStats.dataReadyTime = performance.now();
+          timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
+        }
+        renderLatencyDisplay();
+        updateStats();
+        if (currentResults.length === 0) {
+          emptyState.classList.remove('hidden');
+        }
+      }
+    });
   }
 
   const eventSource = new EventSource(url);
