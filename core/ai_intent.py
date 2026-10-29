@@ -84,6 +84,22 @@ HARDWARE_SYNONYMS: Dict[str, Dict] = {
         "is_component": True,
         "description": "Workstation GPU with Ada Lovelace Architecture"
     },
+    "5090": {
+        "canonical_name": "NVIDIA GeForce RTX 5090",
+        "category_intent": "STANDALONE_GPU",
+        "search_synonyms": ["rtx 5090", "geforce rtx 5090", "placa video rtx 5090"],
+        "expected_price_min": 9000.0,
+        "is_component": True,
+        "description": "Flagship Blackwell Gaming & Creator GPU (32GB GDDR7)"
+    },
+    "nvidia 5090": {
+        "canonical_name": "NVIDIA GeForce RTX 5090",
+        "category_intent": "STANDALONE_GPU",
+        "search_synonyms": ["rtx 5090", "geforce rtx 5090", "placa video rtx 5090"],
+        "expected_price_min": 9000.0,
+        "is_component": True,
+        "description": "Flagship Blackwell Gaming & Creator GPU (32GB GDDR7)"
+    },
     "rtx 5090": {
         "canonical_name": "NVIDIA GeForce RTX 5090",
         "category_intent": "STANDALONE_GPU",

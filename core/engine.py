@@ -579,7 +579,7 @@ class SearchEngine:
         for coro in asyncio.as_completed(tasks):
             try:
                 res = await coro
-                if res and (res.get("items") or res.get("error")):
+                if res and ("items" in res or "error" in res):
                     yield {
                         "type": "provider_result",
                         "payload": res
