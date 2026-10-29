@@ -2,7 +2,7 @@ import time
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, AsyncGenerator, Optional
-from core.schema import StoreResult, SearchResponse, StockLevel
+from core.schema import StoreResult, SearchResponse, StockLevel, ProductCategory
 from core.countries import COUNTRIES_REGISTRY
 from core.relevance import calculate_relevance
 from core.branches import attach_branch_info
