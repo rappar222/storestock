@@ -28,62 +28,62 @@ class FlancoProvider(BaseProvider):
 
         try:
             s = get_shared_session()
-            r = s.get(url, headers=headers, timeout=2.0)
+            r = s.get(url, headers=headers, timeout=5.0)
             if r.status_code != 200:
                 return results
 
-                soup = BeautifulSoup(r.text, "html.parser")
-                items = soup.select(".product-item")
+            soup = BeautifulSoup(r.text, "html.parser")
+            items = soup.select(".product-item")
 
-                for idx, item in enumerate(items[:20]):
-                    name_el = item.select_one(".product-item-link")
-                    if not name_el:
-                        continue
-                    title = name_el.text.strip()
-                    product_url = name_el.get("href", url)
+            for idx, item in enumerate(items[:20]):
+                name_el = item.select_one(".product-item-link")
+                if not name_el:
+                    continue
+                title = name_el.text.strip()
+                product_url = name_el.get("href", url)
 
-                    price_el = item.select_one(".price")
-                    if not price_el:
-                        continue
+                price_el = item.select_one(".price")
+                if not price_el:
+                    continue
 
-                    raw_price = price_el.text.strip()
-                    clean_price = re.sub(r"[^\d,\.]", "", raw_price)
-                    clean_price = clean_price.replace(".", "").replace(",", ".")
-                    try:
-                        price = float(clean_price)
-                    except ValueError:
-                        price = 0.0
+                raw_price = price_el.text.strip()
+                clean_price = re.sub(r"[^\d,\.]", "", raw_price)
+                clean_price = clean_price.replace(".", "").replace(",", ".")
+                try:
+                    price = float(clean_price)
+                except ValueError:
+                    price = 0.0
 
-                    img_el = item.select_one(".product-image-photo")
-                    img_url = img_el.get("src") if img_el else None
+                img_el = item.select_one(".product-image-photo")
+                img_url = img_el.get("src") if img_el else None
 
-                    in_stock = True
-                    stock_level = StockLevel.IN_STOCK
-                    badge_text = "In Stock (Delivery / In-store)"
+                in_stock = True
+                stock_level = StockLevel.IN_STOCK
+                badge_text = "In Stock (Delivery / In-store)"
 
-                    if "epuizat" in item.text.lower():
-                        in_stock = False
-                        stock_level = StockLevel.OUT_OF_STOCK
-                        badge_text = "Out of Stock"
+                if "epuizat" in item.text.lower():
+                    in_stock = False
+                    stock_level = StockLevel.OUT_OF_STOCK
+                    badge_text = "Out of Stock"
 
-                    results.append(
-                        StoreResult(
-                            id=f"flanco_{idx}_{hash(product_url) % 100000}",
-                            store_name=self.store_name,
-                            store_icon=self.store_icon,
-                            country_code=self.country_code,
-                            title=title,
-                            price=price,
-                            currency="RON",
-                            in_stock=in_stock,
-                            stock_level=stock_level,
-                            stock_badge_text=badge_text,
-                            product_url=product_url,
-                            image_url=img_url,
-                            delivery_info="Standard Delivery & Store Pickup",
-                            category=ProductCategory.TECH_HARDWARE
-                        )
+                results.append(
+                    StoreResult(
+                        id=f"flanco_{idx}_{hash(product_url) % 100000}",
+                        store_name=self.store_name,
+                        store_icon=self.store_icon,
+                        country_code=self.country_code,
+                        title=title,
+                        price=price,
+                        currency="RON",
+                        in_stock=in_stock,
+                        stock_level=stock_level,
+                        stock_badge_text=badge_text,
+                        product_url=product_url,
+                        image_url=img_url,
+                        delivery_info="Standard Delivery & Store Pickup",
+                        category=ProductCategory.TECH_HARDWARE
                     )
+                )
         except Exception as e:
             print(f"[Flanco] Error querying: {e}")
 
