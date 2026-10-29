@@ -472,7 +472,8 @@ class SearchEngine:
         query: str,
         country_code: str = "RO",
         user_lat: Optional[float] = None,
-        user_lon: Optional[float] = None
+        user_lon: Optional[float] = None,
+        cached_only: bool = False
     ) -> AsyncGenerator[Dict, None]:
         country_code = country_code.upper()
         ai_intent = analyze_user_intent(query, country_code)
@@ -525,6 +526,10 @@ class SearchEngine:
                         "items": [r.model_dump() for r in items]
                     }
                 }
+
+        # If client requested cached_only, stop here to avoid making server outbound requests!
+        if cached_only:
+            return
 
         synonyms = ai_intent.get("synonyms", [])
         alt_query = synonyms[0] if synonyms and synonyms[0].lower() != query.lower().strip() else None

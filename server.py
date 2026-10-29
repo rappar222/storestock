@@ -116,14 +116,16 @@ async def stream_endpoint(
     q: str = Query(..., description="Product query to search"),
     country: str = Query("RO", description="ISO 2-letter country code"),
     lat: Optional[float] = Query(None, description="User latitude for distance calculation"),
-    lon: Optional[float] = Query(None, description="User longitude for distance calculation")
+    lon: Optional[float] = Query(None, description="User longitude for distance calculation"),
+    cached_only: bool = Query(False, description="Only return instant cache without server outbound scrapes")
 ):
     """
     Server-Sent Events (SSE) streaming endpoint:
     Streams results from each store as soon as that store's response completes.
+    If cached_only=True, serves only the persistent DB cache to prevent server IP rate-limiting.
     """
     async def event_generator():
-        async for event in engine.stream_search(q, country_code=country, user_lat=lat, user_lon=lon):
+        async for event in engine.stream_search(q, country_code=country, user_lat=lat, user_lon=lon, cached_only=cached_only):
             yield f"data: {json.dumps(event)}\n\n"
         # Done event
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
@@ -137,6 +139,35 @@ async def stream_endpoint(
             "Content-Type": "text/event-stream"
         }
     )
+
+@app.post("/api/cache/sync")
+async def sync_client_cache(payload: dict = Body(...)):
+    """
+    Client-Side Distributed Cache Seeder:
+    Accepts products discovered directly on user client devices/browsers
+    and commits them to the TrueNAS persistent DB without TrueNAS making outbound scrapes.
+    """
+    query = payload.get("query", "").strip()
+    country = payload.get("country", "RO").strip().upper()
+    items_raw = payload.get("items", [])
+    if not query or not items_raw:
+        return {"status": "ignored", "saved": 0}
+
+    from core.schema import StoreResult, StockLevel, ProductCategory
+    from core.db import get_database_adapter
+
+    parsed = []
+    for it in items_raw:
+        try:
+            parsed.append(StoreResult(**it))
+        except Exception:
+            pass
+
+    if parsed:
+        adapter = get_database_adapter()
+        adapter.save_cached_products(query, country, parsed)
+        return {"status": "success", "saved": len(parsed)}
+    return {"status": "error", "saved": 0}
 
 # --- Restock Alerts Endpoints ---
 

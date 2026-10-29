@@ -73,7 +73,8 @@ async def run_crawler(
     delay_sec: float = 0.5,
     continuous: bool = False,
     sweep_mode: bool = False,
-    specific_query: Optional[str] = None
+    specific_query: Optional[str] = None,
+    skip_emag: bool = False
 ):
     # Configure event loop thread pool executor across CPU cores
     loop = asyncio.get_running_loop()
@@ -86,9 +87,14 @@ async def run_crawler(
     print(f"⚡ CPU Cores Detected: {cpu_cores} | Active Worker Threads: {workers} (Pool: {thread_pool_size})")
     print(f"🌍 Scope: {len(countries)} Supported Countries")
     print(f"⏱️ Delay per worker: {delay_sec}s")
+    if skip_emag:
+        print("🛡️ Anti-Bot Shield: eMAG excluded to protect home IP from Cloudflare verification")
     print("=" * 72)
 
     engine = SearchEngine()
+    if skip_emag and "RO" in engine.providers:
+        engine.providers["RO"] = [p for p in engine.providers["RO"] if "emag" not in getattr(p, "store_id", "").lower()]
+
     db = get_database_adapter()
 
     # Initial DB State
@@ -285,6 +291,11 @@ def main():
         default=None,
         help="Scour for one specific query across countries"
     )
+    parser.add_argument(
+        "--skip-emag",
+        action="store_true",
+        help="Skip eMAG during crawling to protect home IP from bot verification"
+    )
 
     args = parser.parse_args()
 
@@ -303,7 +314,8 @@ def main():
         delay_sec=args.delay,
         continuous=args.continuous,
         sweep_mode=args.sweep,
-        specific_query=args.query
+        specific_query=args.query,
+        skip_emag=args.skip_emag
     ))
 
 if __name__ == "__main__":

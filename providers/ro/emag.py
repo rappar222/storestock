@@ -12,6 +12,9 @@ import asyncio
 from core.schema import StoreResult, StockLevel, ProductCategory
 from providers.base import BaseProvider
 from core.http_pool import get_shared_session
+import time
+
+_EMAG_COOLDOWN_UNTIL = 0
 
 class EmagProvider(BaseProvider):
     store_id = "emag_ro"
@@ -21,19 +24,40 @@ class EmagProvider(BaseProvider):
     store_icon = "shopping-cart"
 
     def _sync_search(self, query: str) -> List[StoreResult]:
+        global _EMAG_COOLDOWN_UNTIL
         results: List[StoreResult] = []
+
+        # If eMAG previously triggered a bot challenge, protect home IP and do not hammer
+        if time.time() < _EMAG_COOLDOWN_UNTIL:
+            remaining = int(_EMAG_COOLDOWN_UNTIL - time.time())
+            return results
+
         encoded_query = urllib.parse.quote(query)
         url = f"https://www.emag.ro/search/{encoded_query}"
         
         headers = {
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
             "Accept-Language": "ro-RO,ro;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Referer": "https://www.emag.ro/"
+            "Referer": "https://www.emag.ro/",
+            "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "same-origin"
         }
 
         try:
             s = get_shared_session()
-            r = s.get(url, headers=headers, timeout=2.5)
+            r = s.get(url, headers=headers, timeout=3.5)
+
+            # Detect Cloudflare Bot Challenge / Block
+            if r.status_code in (403, 429) or "challenge-platform" in r.text or "cf-mitigated" in r.headers or "just a moment" in r.text.lower():
+                _EMAG_COOLDOWN_UNTIL = time.time() + 600  # Back off 10 mins
+                print("[eMAG] Cloudflare anti-bot challenge detected. Backing off live server requests for 10 minutes to protect IP.")
+                return results
+
             if r.status_code != 200:
                 return results
 
