@@ -11,8 +11,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-RUN useradd -m -u 1000 appuser
-
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -21,9 +19,7 @@ COPY providers/ ./providers/
 COPY static/ ./static/
 COPY server.py .
 
-RUN touch alerts_db.json && mkdir -p data && chown -R appuser:appuser /app
-
-USER appuser
+RUN mkdir -p data
 
 EXPOSE 3000
 

@@ -106,79 +106,79 @@ class EmagProvider(BaseProvider):
             soup = BeautifulSoup(r.text, "html.parser")
             cards = soup.select(".card-item")
 
-                for idx, card in enumerate(cards[:24]):
-                    title_el = card.select_one(".card-v2-title")
-                    if not title_el:
-                        continue
-                    title = title_el.text.strip()
-                    
-                    price_el = card.select_one(".product-new-price")
-                    if not price_el:
-                        continue
-                    
-                    # Parse price like "3.539,99 Lei" or "14,50 Lei"
-                    raw_price = price_el.text.strip()
-                    clean_price_str = re.sub(r"[^\d,\.]", "", raw_price)
-                    clean_price_str = clean_price_str.replace(".", "").replace(",", ".")
-                    try:
-                        price = float(clean_price_str)
-                    except ValueError:
-                        price = 0.0
+            for idx, card in enumerate(cards[:24]):
+                title_el = card.select_one(".card-v2-title")
+                if not title_el:
+                    continue
+                title = title_el.text.strip()
+                
+                price_el = card.select_one(".product-new-price")
+                if not price_el:
+                    continue
+                
+                # Parse price like "3.539,99 Lei" or "14,50 Lei"
+                raw_price = price_el.text.strip()
+                clean_price_str = re.sub(r"[^\d,\.]", "", raw_price)
+                clean_price_str = clean_price_str.replace(".", "").replace(",", ".")
+                try:
+                    price = float(clean_price_str)
+                except ValueError:
+                    price = 0.0
 
-                    link_el = card.select_one("a[href]")
-                    product_url = link_el["href"] if link_el else url
-                    if product_url.startswith("/"):
-                        product_url = "https://www.emag.ro" + product_url
+                link_el = card.select_one("a[href]")
+                product_url = link_el["href"] if link_el else url
+                if product_url.startswith("/"):
+                    product_url = "https://www.emag.ro" + product_url
 
-                    img_el = card.select_one("img")
-                    img_url = None
-                    if img_el:
-                        img_url = img_el.get("src") or img_el.get("data-src")
+                img_el = card.select_one("img")
+                img_url = None
+                if img_el:
+                    img_url = img_el.get("src") or img_el.get("data-src")
 
-                    # Check stock / order availability
-                    btn = card.select_one("button[type=submit]") or card.select_one(".btn")
-                    btn_text = btn.text.strip().lower() if btn else ""
-                    
+                # Check stock / order availability
+                btn = card.select_one("button[type=submit]") or card.select_one(".btn")
+                btn_text = btn.text.strip().lower() if btn else ""
+                
+                in_stock = True
+                stock_level = StockLevel.IN_STOCK
+                badge_text = "In Stock"
+
+                if "adauga in cos" in btn_text:
+                    in_stock = True
+                    stock_level = StockLevel.IN_STOCK
+                    badge_text = "In Stock (Order Now)"
+                elif "stoc epuizat" in card.text.lower() or "notifica-ma" in btn_text:
+                    in_stock = False
+                    stock_level = StockLevel.OUT_OF_STOCK
+                    badge_text = "Out of Stock"
+                elif "in stoc" in card.text.lower():
                     in_stock = True
                     stock_level = StockLevel.IN_STOCK
                     badge_text = "In Stock"
 
-                    if "adauga in cos" in btn_text:
-                        in_stock = True
-                        stock_level = StockLevel.IN_STOCK
-                        badge_text = "In Stock (Order Now)"
-                    elif "stoc epuizat" in card.text.lower() or "notifica-ma" in btn_text:
-                        in_stock = False
-                        stock_level = StockLevel.OUT_OF_STOCK
-                        badge_text = "Out of Stock"
-                    elif "in stoc" in card.text.lower():
-                        in_stock = True
-                        stock_level = StockLevel.IN_STOCK
-                        badge_text = "In Stock"
+                # Check seller / delivery badge
+                delivery_info = "eMAG Genius / Direct Delivery"
+                if "partener" in card.text.lower() or "vandut de" in card.text.lower():
+                    delivery_info = "Marketplace Partner"
 
-                    # Check seller / delivery badge
-                    delivery_info = "eMAG Genius / Direct Delivery"
-                    if "partener" in card.text.lower() or "vandut de" in card.text.lower():
-                        delivery_info = "Marketplace Partner"
-
-                    results.append(
-                        StoreResult(
-                            id=f"emag_{idx}_{hash(product_url) % 100000}",
-                            store_name=self.store_name,
-                            store_icon=self.store_icon,
-                            country_code=self.country_code,
-                            title=title,
-                            price=price,
-                            currency="RON",
-                            in_stock=in_stock,
-                            stock_level=stock_level,
-                            stock_badge_text=badge_text,
-                            product_url=product_url,
-                            image_url=img_url,
-                            delivery_info=delivery_info,
-                            category=ProductCategory.GENERAL
-                        )
+                results.append(
+                    StoreResult(
+                        id=f"emag_{idx}_{hash(product_url) % 100000}",
+                        store_name=self.store_name,
+                        store_icon=self.store_icon,
+                        country_code=self.country_code,
+                        title=title,
+                        price=price,
+                        currency="RON",
+                        in_stock=in_stock,
+                        stock_level=stock_level,
+                        stock_badge_text=badge_text,
+                        product_url=product_url,
+                        image_url=img_url,
+                        delivery_info=delivery_info,
+                        category=ProductCategory.GENERAL
                     )
+                )
         except Exception as e:
             print(f"[EmagProvider] Error querying: {e}")
 

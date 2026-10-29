@@ -7,7 +7,10 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from core.schema import RestockAlert
 
-ALERTS_FILE = os.path.join(os.path.dirname(__file__), "..", "alerts_db.json")
+DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+ALERTS_FILE = os.path.join(DATA_DIR, "alerts_db.json")
+LEGACY_ALERTS_FILE = os.path.join(os.path.dirname(__file__), "..", "alerts_db.json")
 
 class AlertManager:
     def __init__(self):
@@ -15,9 +18,15 @@ class AlertManager:
         self._load()
 
     def _load(self):
-        if os.path.exists(ALERTS_FILE):
+        file_to_load = None
+        if os.path.isfile(ALERTS_FILE):
+            file_to_load = ALERTS_FILE
+        elif os.path.isfile(LEGACY_ALERTS_FILE):
+            file_to_load = LEGACY_ALERTS_FILE
+
+        if file_to_load:
             try:
-                with open(ALERTS_FILE, "r", encoding="utf-8") as f:
+                with open(file_to_load, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     for item in data:
                         alert = RestockAlert(**item)

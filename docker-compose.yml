@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   storestock:
     image: storestock:latest
@@ -19,9 +17,7 @@ services:
       - SMTP_FROM=${SMTP_FROM:-rappar2018@gmail.com}
       - SMTP_TLS=${SMTP_TLS:-true}
     volumes:
-      # Persist watchlist & restock alerts database across container restarts
-      - ./alerts_db.json:/app/alerts_db.json
-      # Persist user feedback logs on host disk
+      # Persist user feedback logs & alerts database on host disk
       - ./data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
