@@ -53,7 +53,7 @@ class AmazonProvider(BaseProvider):
 
         try:
             with requests.Session(impersonate="chrome124") as s:
-                r = s.get(url, headers=headers, timeout=1.5)
+                r = s.get(url, headers=headers, timeout=6.0)
                 if r.status_code != 200:
                     return results
 
@@ -125,8 +125,8 @@ class AmazonProvider(BaseProvider):
                             category=ProductCategory.GENERAL
                         )
                     )
-        except Exception as e:
-            print(f"[{self.store_name}] Error querying: {e}")
+        except Exception:
+            pass
 
         return results
 

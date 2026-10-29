@@ -68,13 +68,11 @@ class TemuProvider(BaseProvider):
 
         try:
             with requests.Session(impersonate="chrome124") as s:
-                r = s.get(url, headers=headers, timeout=1.5)
+                r = s.get(url, headers=headers, timeout=6.0)
                 if r.status_code == 200:
                     results = self._parse_html(r.text, clean_query, url)
-                else:
-                    print(f"[Temu] Returned HTTP {r.status_code} for query: {clean_query}")
-        except Exception as e:
-            print(f"[Temu] Error querying {clean_query}: {e}")
+        except Exception:
+            pass
 
         return results
 

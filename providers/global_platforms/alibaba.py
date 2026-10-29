@@ -49,7 +49,7 @@ class AlibabaProvider(BaseProvider):
 
         try:
             with requests.Session(impersonate="chrome124") as s:
-                r = s.get(url, headers=headers, timeout=1.5)
+                r = s.get(url, headers=headers, timeout=6.0)
                 if r.status_code == 200:
                     soup = BeautifulSoup(r.text, "html.parser")
                     cards = soup.select("div.fy23-search-card, div.m-gallery-product-item, div[data-content='product'], div.list-no-v2-outer")
@@ -106,7 +106,7 @@ class AlibabaProvider(BaseProvider):
                                 category=ProductCategory.GENERAL
                             )
                         )
-        except Exception as e:
-            print(f"[Alibaba] Error querying {query}: {e}")
+        except Exception:
+            pass
 
         return results
