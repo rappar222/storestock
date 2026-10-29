@@ -1320,9 +1320,12 @@ function renderInitialWelcomeState() {
   safeRenderIcons();
 }
 
-// Progressive Multi-Stage Latency & Deferred Image Timing State
+// Progressive Multi-Stage Latency & Dynamic Scroll-Based Image Timing
 let currentSearchBatchId = 0;
 let imageLoadingTimeoutTimer = null;
+let imageScrollObserver = null;
+const loadedImageSrcSet = new Set();
+
 let timingStats = {
   batchId: 0,
   searchStartTime: 0,
@@ -1333,6 +1336,8 @@ let timingStats = {
   imagesElapsed: null,
   totalImages: 0,
   loadedImages: 0,
+  visibleImagesTotal: 0,
+  visibleImagesLoaded: 0,
   streamDone: false,
 };
 
@@ -1346,12 +1351,13 @@ function renderLatencyDisplay() {
 
   let imgBadge = '';
   if (timingStats.imagesElapsed !== null) {
-    imgBadge = `<span class="text-sky-400 font-bold">🖼️ Pictures: ${timingStats.imagesElapsed}ms</span>`;
+    const scrollProgress = timingStats.totalImages > 0 ? ` (${timingStats.loadedImages}/${timingStats.totalImages})` : '';
+    imgBadge = `<span class="text-sky-400 font-bold">🖼️ Pictures: ${timingStats.imagesElapsed}ms${scrollProgress}</span>`;
   } else if (timingStats.totalImages > 0) {
     const elapsedSoFar = timingStats.imagesStartTime ? Math.round(now - timingStats.imagesStartTime) : 0;
     imgBadge = `<span class="text-sky-300 font-medium">🖼️ Pictures: ${timingStats.loadedImages}/${timingStats.totalImages} (${elapsedSoFar}ms)...</span>`;
   } else {
-    imgBadge = `<span class="text-slate-400">🖼️ Pictures: pending</span>`;
+    imgBadge = `<span class="text-slate-400">🖼️ Pictures: scroll to load</span>`;
   }
 
   let totalBadge = '';
@@ -1359,7 +1365,7 @@ function renderLatencyDisplay() {
     const totalMs = Math.round(Math.max(timingStats.dataReadyTime, timingStats.imagesDoneTime) - timingStats.searchStartTime);
     totalBadge = `<span class="text-white font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-lg shadow-sm">⏱️ Total: ${totalMs}ms</span>`;
   } else if (timingStats.streamDone) {
-    totalBadge = `<span class="text-slate-400">⏱️ Total: loading pictures...</span>`;
+    totalBadge = `<span class="text-slate-400">⏱️ Total: loading visible...</span>`;
   } else {
     totalBadge = `<span class="text-slate-400">⏱️ Total: searching...</span>`;
   }
@@ -1377,67 +1383,114 @@ function renderLatencyDisplay() {
 
 function triggerDeferredImageLoading() {
   const pendingImages = document.querySelectorAll('.deferred-product-img[data-src]');
-  if (pendingImages.length === 0) return;
+  const allImages = document.querySelectorAll('.deferred-product-img');
+  timingStats.totalImages = allImages.length;
+  timingStats.loadedImages = allImages.length - pendingImages.length;
+
+  if (pendingImages.length === 0) {
+    if (timingStats.imagesElapsed === null && timingStats.imagesStartTime) {
+      timingStats.imagesDoneTime = performance.now();
+      timingStats.imagesElapsed = Math.round(timingStats.imagesDoneTime - timingStats.imagesStartTime);
+    }
+    renderLatencyDisplay();
+    return;
+  }
 
   const thisBatchId = timingStats.batchId;
-  timingStats.totalImages = pendingImages.length;
-  timingStats.loadedImages = 0;
   if (!timingStats.imagesStartTime) {
     timingStats.imagesStartTime = performance.now();
   }
-  timingStats.imagesDoneTime = 0;
-  timingStats.imagesElapsed = null;
+
+  // Calculate visible pending images in viewport for initial latency measurement
+  const vh = window.innerHeight || document.documentElement.clientHeight || 800;
+  let visibleCount = 0;
+  pendingImages.forEach(img => {
+    const rect = img.getBoundingClientRect();
+    if (rect.top < vh + 200 && rect.bottom > -100) {
+      visibleCount++;
+    }
+  });
+  timingStats.visibleImagesTotal = Math.max(visibleCount, 1);
+  timingStats.visibleImagesLoaded = 0;
   renderLatencyDisplay();
 
   if (imageLoadingTimeoutTimer) clearTimeout(imageLoadingTimeoutTimer);
 
-  // Safety ceiling: finalize pictures after 3 seconds so the counter never hangs on slow 3rd-party CDNs
+  // Safety ceiling: finalize pictures timer after 2.5 seconds so counter never hangs on slow 3rd-party CDNs
   imageLoadingTimeoutTimer = setTimeout(() => {
     if (timingStats.batchId === thisBatchId && timingStats.imagesElapsed === null) {
       timingStats.imagesDoneTime = performance.now();
       timingStats.imagesElapsed = Math.round(timingStats.imagesDoneTime - timingStats.imagesStartTime);
       renderLatencyDisplay();
     }
-  }, 3000);
+  }, 2500);
 
-  // Micro-delay (requestAnimationFrame) to guarantee the browser paints text & prices first
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      pendingImages.forEach(img => {
-        const targetUrl = img.getAttribute('data-src');
-        if (!targetUrl) return;
-        img.removeAttribute('data-src');
+  const loadSingleImage = (img) => {
+    const targetUrl = img.getAttribute('data-src');
+    if (!targetUrl) return;
+    img.removeAttribute('data-src');
 
-        const handleImageFinish = () => {
-          if (timingStats.batchId !== thisBatchId) return;
-          timingStats.loadedImages++;
-          img.classList.remove('opacity-0');
-          const skeleton = img.previousElementSibling;
-          if (skeleton && skeleton.classList.contains('img-skeleton')) {
-            skeleton.style.opacity = '0';
-          }
+    const handleFinish = () => {
+      if (timingStats.batchId !== thisBatchId) return;
+      timingStats.loadedImages++;
+      loadedImageSrcSet.add(targetUrl);
 
-          if (timingStats.loadedImages >= timingStats.totalImages) {
-            if (imageLoadingTimeoutTimer) clearTimeout(imageLoadingTimeoutTimer);
-            timingStats.imagesDoneTime = performance.now();
-            timingStats.imagesElapsed = Math.round(timingStats.imagesDoneTime - timingStats.imagesStartTime);
-            renderLatencyDisplay();
-          } else {
-            renderLatencyDisplay();
-          }
-        };
+      img.classList.remove('opacity-0');
+      const skeleton = img.previousElementSibling;
+      if (skeleton && skeleton.classList.contains('img-skeleton')) {
+        skeleton.style.opacity = '0';
+        setTimeout(() => {
+          if (skeleton && skeleton.parentNode) skeleton.style.display = 'none';
+        }, 300);
+      }
 
-        img.onload = handleImageFinish;
-        img.onerror = function() {
-          this.onerror = null;
-          this.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='1.5'><rect width='18' height='18' x='3' y='3' rx='2'/><circle cx='9' cy='9' r='2'/><path d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/></svg>";
-          handleImageFinish();
-        };
+      if (timingStats.imagesElapsed === null) {
+        timingStats.visibleImagesLoaded++;
+        if (timingStats.visibleImagesLoaded >= timingStats.visibleImagesTotal || timingStats.loadedImages >= timingStats.totalImages) {
+          if (imageLoadingTimeoutTimer) clearTimeout(imageLoadingTimeoutTimer);
+          timingStats.imagesDoneTime = performance.now();
+          timingStats.imagesElapsed = Math.round(timingStats.imagesDoneTime - timingStats.imagesStartTime);
+        }
+      }
+      renderLatencyDisplay();
+    };
 
-        img.src = targetUrl;
+    img.onload = handleFinish;
+    img.onerror = function() {
+      this.onerror = null;
+      this.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='1.5'><rect width='18' height='18' x='3' y='3' rx='2'/><circle cx='9' cy='9' r='2'/><path d='m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21'/></svg>";
+      handleFinish();
+    };
+
+    img.src = targetUrl;
+  };
+
+  // Disconnect previous scroll observer
+  if (imageScrollObserver) {
+    imageScrollObserver.disconnect();
+  }
+
+  // Use IntersectionObserver to dynamically load pictures as the user scrolls into view!
+  if ('IntersectionObserver' in window) {
+    imageScrollObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const targetImg = entry.target;
+          observer.unobserve(targetImg);
+          loadSingleImage(targetImg);
+        }
       });
-    }, 25);
-  });
+    }, {
+      root: null,
+      rootMargin: '250px 0px', // Pre-load 250px before entering viewport for silky-smooth scrolling
+      threshold: 0.01
+    });
+
+    pendingImages.forEach(img => imageScrollObserver.observe(img));
+  } else {
+    // Fallback if IntersectionObserver is not supported
+    pendingImages.forEach(img => loadSingleImage(img));
+  }
 }
 
 // Live Streaming Search via SSE
@@ -1455,6 +1508,7 @@ function executeSearch(query) {
 
   const country = countrySelect.value || 'RO';
   currentResults = [];
+  loadedImageSrcSet.clear();
   activeBrand = null;
   if (aiIntentBanner) aiIntentBanner.classList.add('hidden');
   resultsGrid.innerHTML = '';
@@ -1842,13 +1896,11 @@ function renderResults() {
 
         <div class="relative w-full h-40 rounded-xl bg-slate-900/80 overflow-hidden flex items-center justify-center p-2 group-hover:scale-[1.02] transition">
           <!-- Progressive Loading Skeleton Placeholder -->
-          <div class="img-skeleton absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-800/80 to-slate-900 animate-pulse pointer-events-none transition-opacity duration-300"></div>
+          <div class="img-skeleton ${loadedImageSrcSet.has(imgUrl) ? 'hidden' : ''} absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-800/80 to-slate-900 animate-pulse pointer-events-none transition-opacity duration-300"></div>
           <img 
-            data-src="${imgUrl}" 
-            src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'></svg>" 
+            ${loadedImageSrcSet.has(imgUrl) ? `src="${imgUrl}"` : `src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'></svg>" data-src="${imgUrl}"`}
             alt="${item.title.replace(/"/g, '&quot;')}" 
-            class="deferred-product-img max-h-full max-w-full object-contain opacity-0 transition-opacity duration-300 relative z-10" 
-            loading="lazy" 
+            class="deferred-product-img max-h-full max-w-full object-contain ${loadedImageSrcSet.has(imgUrl) ? '' : 'opacity-0'} transition-opacity duration-300 relative z-10" 
             decoding="async"
           />
         </div>
