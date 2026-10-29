@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
-StoreStock Internet Scour & Catalog Seeder
-Scrapes products across all 50 supported countries and multiple categories,
-saving verified store prices, stock, and images directly into the persistent database cache.
+StoreStock Multi-Core High-Throughput Scourer & Database Populator
+Scrapes products across all 50 supported countries and multiple categories
+using concurrent worker pools across CPU cores and async I/O.
 """
 
+import os
 import sys
 import time
 import random
 import asyncio
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Optional, Tuple
 from core.engine import SearchEngine
 from core.db import get_database_adapter
@@ -66,132 +68,188 @@ def get_country_metadata(code: str) -> Tuple[str, str, str]:
 
 async def run_crawler(
     countries: List[str],
-    count: int = 25,
-    delay_sec: float = 1.5,
+    count: int = 50,
+    workers: int = 8,
+    delay_sec: float = 0.5,
     continuous: bool = False,
     sweep_mode: bool = False,
     specific_query: Optional[str] = None
 ):
-    print("=" * 70)
-    print("🚀 StoreStock Multi-Country Internet Scourer & Database Populator")
+    # Configure event loop thread pool executor across CPU cores
+    loop = asyncio.get_running_loop()
+    cpu_cores = os.cpu_count() or 4
+    thread_pool_size = max(workers * 4, cpu_cores * 4, 32)
+    loop.set_default_executor(ThreadPoolExecutor(max_workers=thread_pool_size))
+
+    print("=" * 72)
+    print("🚀 StoreStock High-Throughput Multi-Core Internet Scourer")
+    print(f"⚡ CPU Cores Detected: {cpu_cores} | Active Worker Threads: {workers} (Pool: {thread_pool_size})")
     print(f"🌍 Scope: {len(countries)} Supported Countries")
-    print(f"⏱️ Inter-query Delay: {delay_sec}s")
-    print("=" * 70)
+    print(f"⏱️ Delay per worker: {delay_sec}s")
+    print("=" * 72)
 
     engine = SearchEngine()
     db = get_database_adapter()
 
-    # Initial DB Stats
+    # Initial DB State
     initial_stats = db.get_stats()
     print("📦 Starting Database State:")
     print(f"   Engine: {initial_stats.get('engine')} ({initial_stats.get('path', 'remote')})")
     print(f"   Cached Products: {initial_stats.get('total_cached_products', 0)}")
     print(f"   Storage Size: {initial_stats.get('file_size_human', '0 B')}")
-    print("=" * 70)
+    print("=" * 72)
 
+    db_write_lock = asyncio.Lock()
+    print_lock = asyncio.Lock()
+
+    # Shared Counters
     processed_count = 0
     total_saved_this_run = 0
     start_time = time.time()
 
-    # Build work queue
-    work_items = []
+    # Queue of work items: (country_code, category, query)
+    queue: asyncio.Queue = asyncio.Queue()
 
-    if sweep_mode:
-        # Sweep mode: takes a single query or top queries and runs through EVERY country sequentially
-        sweep_queries = [specific_query] if specific_query else ["rtx 5090", "iphone 16", "macbook pro", "playstation 5"]
-        for q in sweep_queries:
-            for c_code in countries:
-                work_items.append((c_code, "Multi-Country Sweep", q))
-    else:
-        # Balanced sampling: randomize across countries and categories
-        for _ in range(count * 3):
-            c_code = random.choice(countries)
-            if specific_query:
-                work_items.append((c_code, "Manual Query", specific_query.strip()))
-            else:
-                if c_code == "RO" and random.random() < 0.45:
-                    cat = random.choice(list(RO_LOCAL_QUERIES.keys()))
-                    q = random.choice(RO_LOCAL_QUERIES[cat])
+    def populate_queue():
+        if sweep_mode:
+            sweep_queries = [specific_query] if specific_query else ["rtx 5090", "iphone 16", "macbook pro", "playstation 5"]
+            for q in sweep_queries:
+                for c_code in countries:
+                    queue.put_nowait((c_code, "Multi-Country Sweep", q))
+        else:
+            items_to_generate = max(count * 2, 200)
+            for _ in range(items_to_generate):
+                c_code = random.choice(countries)
+                if specific_query:
+                    queue.put_nowait((c_code, "Manual Query", specific_query.strip()))
                 else:
-                    cat = random.choice(list(GLOBAL_QUERIES.keys()))
-                    q = random.choice(GLOBAL_QUERIES[cat])
-                work_items.append((c_code, cat, q))
+                    if c_code == "RO" and random.random() < 0.40:
+                        cat = random.choice(list(RO_LOCAL_QUERIES.keys()))
+                        q = random.choice(RO_LOCAL_QUERIES[cat])
+                    else:
+                        cat = random.choice(list(GLOBAL_QUERIES.keys()))
+                        q = random.choice(GLOBAL_QUERIES[cat])
+                    queue.put_nowait((c_code, cat, q))
 
-    target_total = len(work_items) if sweep_mode else count
+    populate_queue()
+    target_total = queue.qsize() if sweep_mode else count
 
-    try:
+    # Worker Task
+    async def worker(worker_id: int):
+        nonlocal processed_count, total_saved_this_run
+
         while True:
-            for c_code, cat, query in work_items:
-                if not continuous and processed_count >= target_total:
-                    break
+            # Check exit conditions
+            if not continuous and processed_count >= target_total:
+                break
 
-                processed_count += 1
-                flag, c_name, curr = get_country_metadata(c_code)
-                prefix = f"[{processed_count}]" if continuous else f"[{processed_count}/{target_total}]"
+            try:
+                if queue.empty():
+                    if continuous:
+                        populate_queue()
+                    else:
+                        break
 
-                print(f"\n{prefix} {flag} {c_name} ({c_code}) | Scouring '{query}' ({cat})...")
+                c_code, cat, query = queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
 
-                query_items: List[StoreResult] = []
-                store_breakdown: Dict[str, int] = {}
-                q_start = time.time()
+            query_start = time.time()
+            query_items: List[StoreResult] = []
+            store_breakdown: Dict[str, int] = {}
 
-                try:
-                    async for event in engine.stream_search(query, country_code=c_code):
-                        if event.get("type") == "provider_result":
-                            payload = event.get("payload", {})
-                            items_data = payload.get("items", [])
-                            store_name = payload.get("store_name", "Store")
+            flag, c_name, curr = get_country_metadata(c_code)
 
-                            if items_data:
-                                store_breakdown[store_name] = len(items_data)
-                                for item_dict in items_data:
-                                    try:
-                                        query_items.append(StoreResult(**item_dict))
-                                    except Exception:
-                                        pass
-                except Exception as e:
-                    print(f"   ⚠️ Search error in {c_code} for '{query}': {e}")
+            try:
+                async for event in engine.stream_search(query, country_code=c_code):
+                    if event.get("type") == "provider_result":
+                        payload = event.get("payload", {})
+                        items_data = payload.get("items", [])
+                        store_name = payload.get("store_name", "Store")
 
-                elapsed = round(time.time() - q_start, 2)
+                        if items_data:
+                            store_breakdown[store_name] = len(items_data)
+                            for item_dict in items_data:
+                                try:
+                                    query_items.append(StoreResult(**item_dict))
+                                except Exception:
+                                    pass
+            except Exception as e:
+                async with print_lock:
+                    print(f"   [Worker-{worker_id}] ⚠️ Error in {c_code} for '{query}': {e}")
 
-                if query_items:
+            elapsed = round(time.time() - query_start, 2)
+
+            # Safely serialize DB write across workers
+            if query_items:
+                async with db_write_lock:
                     db.save_cached_products(query, c_code, query_items)
                     total_saved_this_run += len(query_items)
 
-                    stores_str = ", ".join([f"{name} ({count})" for name, count in store_breakdown.items()])
-                    print(f"   ✅ Saved {len(query_items)} products in {elapsed}s [{curr}]: {stores_str}")
+            processed_count += 1
+            cur_speed = round(total_saved_this_run / max(time.time() - start_time, 0.1), 1)
+
+            # Thread-safe log output
+            async with print_lock:
+                prefix = f"[#{processed_count}]" if continuous else f"[#{processed_count}/{target_total}]"
+                stores_str = ", ".join([f"{name} ({c})" for name, c in store_breakdown.items()]) if store_breakdown else "none"
+                if query_items:
+                    print(
+                        f"{prefix} (W-{worker_id}) {flag} {c_code} | '{query}' "
+                        f"-> ✅ {len(query_items)} saved ({elapsed}s) [{stores_str}] | ⚡ {cur_speed} items/sec"
+                    )
                 else:
-                    print(f"   ⚪ No products found in {elapsed}s.")
+                    print(f"{prefix} (W-{worker_id}) {flag} {c_code} | '{query}' -> ⚪ 0 found ({elapsed}s)")
 
-                # Real-time DB stats snapshot
-                stats = db.get_stats()
-                print(f"   💾 DB Total: {stats.get('total_cached_products')} items ({stats.get('file_size_human')}) across {stats.get('unique_stores')} stores")
+                # Snapshot DB stats every 10 queries
+                if processed_count % 10 == 0:
+                    stats = db.get_stats()
+                    print(
+                        f"   💾 [DB PROGRESS] Total: {stats.get('total_cached_products')} products "
+                        f"({stats.get('file_size_human')}) across {stats.get('unique_stores')} stores\n"
+                    )
 
-                if (continuous or processed_count < target_total) and delay_sec > 0:
-                    await asyncio.sleep(delay_sec)
+            queue.task_done()
 
-            if not continuous:
-                break
-            random.shuffle(work_items)
+            if delay_sec > 0:
+                await asyncio.sleep(delay_sec)
 
+    # Spawn worker tasks
+    actual_worker_count = min(workers, target_total) if not continuous else workers
+    worker_tasks = [asyncio.create_task(worker(i + 1)) for i in range(actual_worker_count)]
+
+    try:
+        await asyncio.gather(*worker_tasks)
     except (KeyboardInterrupt, asyncio.CancelledError):
-        print("\n\n🛑 Scourer interrupted by user. Finalizing...")
+        print("\n🛑 Interrupt signal received. Stopping worker pool...")
+        for t in worker_tasks:
+            t.cancel()
+        await asyncio.gather(*worker_tasks, return_exceptions=True)
 
     total_time = round(time.time() - start_time, 1)
     final_stats = db.get_stats()
+    avg_speed = round(total_saved_this_run / max(total_time, 0.1), 1)
 
-    print("\n" + "=" * 70)
-    print("🏁 Multi-Country Scour Summary:")
-    print(f"   Queries Processed: {processed_count}")
-    print(f"   Products Saved/Updated This Run: {total_saved_this_run}")
+    print("\n" + "=" * 72)
+    print("🏁 Scour Complete:")
+    print(f"   Workers Utilized: {actual_worker_count} concurrent workers")
+    print(f"   Queries Completed: {processed_count}")
+    print(f"   Products Saved This Run: {total_saved_this_run}")
+    print(f"   Throughput Speed: {avg_speed} products / second")
     print(f"   Final Database Records: {final_stats.get('total_cached_products')}")
     print(f"   Final Storage Size: {final_stats.get('file_size_human')}")
-    print(f"   Total Time Elapsed: {total_time}s")
-    print("=" * 70)
+    print(f"   Total Time: {total_time}s")
+    print("=" * 72)
 
 def main():
     parser = argparse.ArgumentParser(
-        description="StoreStock Multi-Country Internet Scourer & Database Populator"
+        description="StoreStock Multi-Core High-Throughput Internet Scourer"
+    )
+    parser.add_argument(
+        "--workers", "-w", "--threads",
+        type=int,
+        default=8,
+        help="Number of concurrent scraper workers / threads (default: 8, recommended: 4-16)"
     )
     parser.add_argument(
         "--countries", "-c",
@@ -202,24 +260,24 @@ def main():
     parser.add_argument(
         "--count", "-n",
         type=int,
-        default=25,
-        help="Number of queries to scour (default: 25)"
+        default=50,
+        help="Total number of queries to scour (default: 50)"
     )
     parser.add_argument(
         "--delay", "-d",
         type=float,
-        default=1.5,
-        help="Delay in seconds between store queries (default: 1.5)"
+        default=0.5,
+        help="Delay in seconds between store queries per worker (default: 0.5s)"
     )
     parser.add_argument(
         "--continuous",
         action="store_true",
-        help="Run continuously in background, cycling across all supported countries"
+        help="Keep running indefinitely across countries with the worker pool"
     )
     parser.add_argument(
         "--sweep",
         action="store_true",
-        help="Sweep mode: Scour a query systematically across every single one of the 50 countries"
+        help="Sweep mode: Scour across every single one of the 50 countries in parallel"
     )
     parser.add_argument(
         "--query", "-q",
@@ -241,6 +299,7 @@ def main():
     asyncio.run(run_crawler(
         countries=target_countries,
         count=args.count,
+        workers=args.workers,
         delay_sec=args.delay,
         continuous=args.continuous,
         sweep_mode=args.sweep,
