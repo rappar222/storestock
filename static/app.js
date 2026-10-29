@@ -67,10 +67,12 @@ const HARDWARE_WORDS = [
 ];
 
 const COSMETIC_WORDS = [
-  "de corp", "corp", "demachiant", "lotiune", "lotion", "crema", "cream",
+  "de corp", "corp", "demachiant", "demachiere", "lotiune", "lotion", "crema", "cream",
   "hidratant", "hidratanta", "solar", "solara", "bronzare", "plaja",
-  "gel de dus", "sampon", "cosmetic", "parfum", "antirid", "scrub",
-  "exfoliant", "cleanser", "serum", "masca ten", "lapte corp"
+  "gel de dus", "sampon", "cosmetic", "cosmetice", "parfum", "antirid", "scrub",
+  "exfoliant", "cleanser", "serum", "masca ten", "lapte corp",
+  "curatare", "curățare", "nettoyant", "cleansing", "toaleta", "balsam",
+  "bebe", "bebelus", "bebelusi"
 ];
 
 const CHEESE_WORDS = [

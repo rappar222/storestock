@@ -366,15 +366,19 @@ class SearchEngine:
         # Determine queries: primary query + top AI synonym if applicable
         synonyms = ai_intent.get("synonyms", [])
         alt_query = synonyms[0] if synonyms and synonyms[0].lower() != query.lower().strip() else None
+        local_query = ai_intent.get("local_query")
 
         STORE_TIMEOUT_SECONDS = 8.0
 
         async def query_provider(p: BaseProvider):
+            # Use local language query for domestic stores (e.g. 'lapte' for RO stores when user searches 'milk')
+            target_query = local_query if (local_query and p.country_code == country_code) else query
+            fallback_query = query if target_query != query else alt_query
             try:
-                res = await asyncio.wait_for(p.search(query), timeout=STORE_TIMEOUT_SECONDS)
-                if alt_query and len(res) == 0:
+                res = await asyncio.wait_for(p.search(target_query), timeout=STORE_TIMEOUT_SECONDS)
+                if fallback_query and len(res) < 3:
                     try:
-                        res_alt = await asyncio.wait_for(p.search(alt_query), timeout=STORE_TIMEOUT_SECONDS * 0.75)
+                        res_alt = await asyncio.wait_for(p.search(fallback_query), timeout=STORE_TIMEOUT_SECONDS * 0.75)
                         urls = {x.product_url for x in res}
                         for it in res_alt:
                             if it.product_url not in urls:
@@ -482,16 +486,19 @@ class SearchEngine:
 
         synonyms = ai_intent.get("synonyms", [])
         alt_query = synonyms[0] if synonyms and synonyms[0].lower() != query.lower().strip() else None
+        local_query = ai_intent.get("local_query")
 
         STORE_STREAM_TIMEOUT = 8.0
 
         async def run_provider(provider: BaseProvider):
             start_p = time.time()
+            target_query = local_query if (local_query and provider.country_code == country_code) else query
+            fallback_query = query if target_query != query else alt_query
             try:
-                res = await asyncio.wait_for(provider.search(query), timeout=STORE_STREAM_TIMEOUT)
-                if alt_query and len(res) == 0:
+                res = await asyncio.wait_for(provider.search(target_query), timeout=STORE_STREAM_TIMEOUT)
+                if fallback_query and len(res) < 3:
                     try:
-                        res_alt = await asyncio.wait_for(provider.search(alt_query), timeout=STORE_STREAM_TIMEOUT * 0.75)
+                        res_alt = await asyncio.wait_for(provider.search(fallback_query), timeout=STORE_STREAM_TIMEOUT * 0.75)
                         urls = {x.product_url for x in res}
                         for it in res_alt:
                             if it.product_url not in urls:

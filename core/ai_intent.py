@@ -25,14 +25,38 @@ DISCRETE_GPU_INDICATORS: Set[str] = {
 
 # Cosmetics / Beauty words that should never match drinking milk or groceries
 COSMETIC_WORDS: Set[str] = {
-    "de corp", "corp", "demachiant", "lotiune", "lotion", "crema", "cream",
+    "de corp", "corp", "demachiant", "demachiere", "lotiune", "lotion", "crema", "cream",
     "hidratant", "hidratanta", "solar", "solara", "bronzare", "plaja",
-    "gel de dus", "sampon", "cosmetic", "parfum", "antirid", "scrub",
-    "exfoliant", "cleanser", "serum", "masca ten", "lapte corp"
+    "gel de dus", "sampon", "cosmetic", "cosmetice", "parfum", "antirid", "scrub",
+    "exfoliant", "cleanser", "serum", "masca ten", "lapte corp",
+    "curatare", "curățare", "nettoyant", "cleansing", "toaleta", "balsam",
+    "bebe", "bebelus", "bebelusi"
 }
 
 CHEESE_WORDS: Set[str] = {
     "cascaval", "telemea", "branza", "mozzarella", "parmezan", "cheddar", "brie", "camembert"
+}
+
+# Cross-language vocabulary bridges for localized retailer searches
+RO_LOCAL_TRANSLATIONS: Dict[str, str] = {
+    "milk": "lapte",
+    "bread": "paine",
+    "butter": "unt",
+    "eggs": "oua",
+    "coffee": "cafea",
+    "water": "apa",
+    "cheese": "cascaval",
+    "meat": "carne",
+    "chicken": "pui",
+    "oil": "ulei",
+    "sugar": "zahar",
+    "flour": "faina",
+    "beer": "bere",
+    "wine": "vin",
+    "graphics card": "placa video",
+    "motherboard": "placa de baza",
+    "power supply": "sursa alimentare",
+    "headphones": "casti"
 }
 
 HARDWARE_SYNONYMS: Dict[str, Dict] = {
@@ -79,47 +103,85 @@ HARDWARE_SYNONYMS: Dict[str, Dict] = {
 }
 
 GROCERY_INTENTS: Dict[str, Dict] = {
+    "milk": {
+        "canonical_name": "Milk / Lapte (Drinking & Dairy Milk)",
+        "category_intent": "GROCERIES_MILK",
+        "search_synonyms": ["lapte", "lapte uht", "lapte bio", "lapte 3.5%", "whole milk"],
+        "description": "Prioritizing fresh, organic and UHT drinking milk. Filtering body lotions, cleansing lotions & cheese.",
+        "is_component": False,
+        "ro_translation": "lapte"
+    },
     "lapte": {
         "canonical_name": "Lapte (Consum, UHT & Lactate)",
         "category_intent": "GROCERIES_MILK",
         "search_synonyms": ["lapte uht", "lapte bio", "lapte 3.5%", "lapte vegetal"],
-        "description": "Prioritizing fresh, UHT & dairy drinking milk. Demoting cosmetics (lapte de corp) and cheeses.",
-        "is_component": False
+        "description": "Prioritizing fresh, UHT & dairy drinking milk. Demoting cosmetics (lapte de corp, curatare) and cheeses.",
+        "is_component": False,
+        "ro_translation": "lapte"
     },
-    "milk": {
-        "canonical_name": "Milk (Dairy & Plant Milk)",
-        "category_intent": "GROCERIES_MILK",
-        "search_synonyms": ["whole milk", "oat milk", "almond milk", "uht milk"],
-        "description": "Prioritizing fresh, organic and UHT drinking milk. Filtering body lotions & cheese.",
-        "is_component": False
+    "bread": {
+        "canonical_name": "Bread / Pâine (Bakery)",
+        "category_intent": "GROCERIES_BAKERY",
+        "search_synonyms": ["paine", "paine feliata", "paine integrala"],
+        "description": "Prioritizing fresh bakery loaves & sliced bread.",
+        "is_component": False,
+        "ro_translation": "paine"
     },
     "paine": {
         "canonical_name": "Pâine & Produse de Brutărie",
         "category_intent": "GROCERIES_BAKERY",
         "search_synonyms": ["paine feliata", "paine secara", "paine integrala"],
         "description": "Prioritizing fresh bakery loaves & sliced bread.",
-        "is_component": False
+        "is_component": False,
+        "ro_translation": "paine"
+    },
+    "butter": {
+        "canonical_name": "Butter / Unt (Dairy)",
+        "category_intent": "GROCERIES_DAIRY",
+        "search_synonyms": ["unt", "unt 82%", "unt 65%"],
+        "description": "Prioritizing dairy butter for cooking and spreading.",
+        "is_component": False,
+        "ro_translation": "unt"
     },
     "unt": {
         "canonical_name": "Unt de Masă (Lactate)",
         "category_intent": "GROCERIES_DAIRY",
         "search_synonyms": ["unt 82%", "unt 65%", "unt bio"],
         "description": "Prioritizing dairy butter for cooking and spreading.",
-        "is_component": False
+        "is_component": False,
+        "ro_translation": "unt"
+    },
+    "eggs": {
+        "canonical_name": "Eggs / Ouă Proaspete",
+        "category_intent": "GROCERIES_EGGS",
+        "search_synonyms": ["oua", "oua ecologice", "oua marimea l"],
+        "description": "Prioritizing fresh farm & organic eggs.",
+        "is_component": False,
+        "ro_translation": "oua"
     },
     "oua": {
         "canonical_name": "Ouă Proaspete",
         "category_intent": "GROCERIES_EGGS",
         "search_synonyms": ["oua ecologice", "oua marimea l", "oua prepelita"],
         "description": "Prioritizing fresh farm & organic eggs.",
-        "is_component": False
+        "is_component": False,
+        "ro_translation": "oua"
+    },
+    "coffee": {
+        "canonical_name": "Coffee / Cafea (Beans & Ground)",
+        "category_intent": "GROCERIES_COFFEE",
+        "search_synonyms": ["cafea", "cafea boabe", "cafea macinata"],
+        "description": "Prioritizing genuine coffee beans, ground blends & capsules over machines.",
+        "is_component": False,
+        "ro_translation": "cafea"
     },
     "cafea": {
         "canonical_name": "Cafea (Boabe / Măcinată / Capsule)",
         "category_intent": "GROCERIES_COFFEE",
         "search_synonyms": ["cafea boabe", "cafea macinata", "capsule cafea"],
         "description": "Prioritizing genuine coffee beans, ground blends & capsules over machines.",
-        "is_component": False
+        "is_component": False,
+        "ro_translation": "cafea"
     },
     "iphone": {
         "canonical_name": "Apple iPhone Smartphone",
@@ -137,7 +199,7 @@ GROCERY_INTENTS: Dict[str, Dict] = {
     }
 }
 
-def analyze_user_intent(query: str) -> Dict:
+def analyze_user_intent(query: str, country_code: str = "RO") -> Dict:
     q_clean = query.lower().strip()
     
     # Check if vehicle query
@@ -180,7 +242,14 @@ def analyze_user_intent(query: str) -> Dict:
 
     user_wants_system = any(term in q_clean for term in ["desktop", "server", "sistem", "workstation", "laptop", "pc complet"])
     user_wants_accessory = any(acc in q_clean for acc in ACCESSORY_AND_PART_KEYWORDS)
-    user_wants_cosmetic = any(c in q_clean for c in ["corp", "demachiant", "crema", "lotiune", "cosmetice"])
+    user_wants_cosmetic = any(c in q_clean for c in ["corp", "demachiant", "crema", "lotiune", "cosmetice", "curatare", "cleansing"])
+
+    local_query = None
+    if country_code.upper() == "RO":
+        if matched_entry.get("ro_translation"):
+            local_query = matched_entry["ro_translation"]
+        elif q_clean in RO_LOCAL_TRANSLATIONS:
+            local_query = RO_LOCAL_TRANSLATIONS[q_clean]
 
     return {
         "original_query": query,
@@ -191,6 +260,7 @@ def analyze_user_intent(query: str) -> Dict:
         "user_wants_system": user_wants_system,
         "user_wants_accessory": user_wants_accessory,
         "user_wants_cosmetic": user_wants_cosmetic,
+        "local_query": local_query,
         "synonyms": matched_entry.get("search_synonyms", [query])
     }
 
