@@ -18,6 +18,7 @@ COPY core/ ./core/
 COPY providers/ ./providers/
 COPY static/ ./static/
 COPY server.py .
+COPY crawler.py .
 
 RUN mkdir -p data
 
