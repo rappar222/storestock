@@ -1534,54 +1534,8 @@ function triggerDeferredImageLoading() {
   }
 }
 
-// Search Mode (Server vs Client Anti-Bot Bypass)
-let currentSearchMode = localStorage.getItem('storestock_search_mode') || 'server';
-
-function updateSearchModeUI() {
-  const serverBtn = document.getElementById('searchModeServerBtn');
-  const clientBtn = document.getElementById('searchModeClientBtn');
-  const notice = document.getElementById('searchModeNoticeText');
-
-  if (currentSearchMode === 'client') {
-    if (clientBtn) {
-      clientBtn.className = "px-2.5 py-0.5 rounded-md font-medium text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 transition-all cursor-pointer";
-    }
-    if (serverBtn) {
-      serverBtn.className = "px-2.5 py-0.5 rounded-md font-medium text-slate-400 hover:text-white transition-all cursor-pointer";
-    }
-    if (notice) notice.textContent = "Client Browser IP (TrueNAS IP protected)";
-  } else {
-    if (serverBtn) {
-      serverBtn.className = "px-2.5 py-0.5 rounded-md font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 transition-all cursor-pointer";
-    }
-    if (clientBtn) {
-      clientBtn.className = "px-2.5 py-0.5 rounded-md font-medium text-slate-400 hover:text-white transition-all cursor-pointer";
-    }
-    if (notice) notice.textContent = "Fast TrueNAS SSE streaming";
-  }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  updateSearchModeUI();
-  const serverBtn = document.getElementById('searchModeServerBtn');
-  const clientBtn = document.getElementById('searchModeClientBtn');
-  if (serverBtn) {
-    serverBtn.addEventListener('click', () => {
-      currentSearchMode = 'server';
-      localStorage.setItem('storestock_search_mode', 'server');
-      updateSearchModeUI();
-      showToast("Switched to Server Engine (Fast SSE)");
-    });
-  }
-  if (clientBtn) {
-    clientBtn.addEventListener('click', () => {
-      currentSearchMode = 'client';
-      localStorage.setItem('storestock_search_mode', 'client');
-      updateSearchModeUI();
-      showToast("Client Search Active: TrueNAS server IP will NOT be used for scrapes");
-    });
-  }
-});
+// Search Mode: Pure Client Mode (Protects Server IP from bans)
+const currentSearchMode = 'client';
 
 // Live Streaming Search via SSE
 function executeSearch(query) {
