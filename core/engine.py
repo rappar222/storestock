@@ -308,9 +308,9 @@ class SearchEngine:
         if detected == "VEHICLE":
             return [
                 p for p in all_for_country
-                if p.category == ProductCategory.AUTOMOTIVE
-                or "auto" in p.store_id.lower()
-                or "proleasing" in p.store_id.lower()
+                if getattr(p, "category", ProductCategory.GENERAL) == ProductCategory.AUTOMOTIVE
+                or "auto" in getattr(p, "store_id", "").lower()
+                or "proleasing" in getattr(p, "store_id", "").lower()
             ]
 
         # If grocery / food / dairy query
@@ -323,13 +323,13 @@ class SearchEngine:
         ):
             grocery_providers = [
                 p for p in all_for_country
-                if (p.category in [ProductCategory.GROCERIES, ProductCategory.GENERAL]
-                    or "auchan" in p.store_id.lower()
-                    or "emag" in p.store_id.lower()
-                    or "amazon" in p.store_id.lower())
-                and not any(x in p.store_id.lower() for x in ["pcgarage", "flanco", "altex", "mediagalaxy", "evomag", "auto", "proleasing"])
+                if (getattr(p, "category", ProductCategory.GENERAL) in [ProductCategory.GROCERIES, ProductCategory.GENERAL]
+                    or "auchan" in getattr(p, "store_id", "").lower()
+                    or "emag" in getattr(p, "store_id", "").lower()
+                    or "amazon" in getattr(p, "store_id", "").lower())
+                and not any(x in getattr(p, "store_id", "").lower() for x in ["pcgarage", "flanco", "altex", "mediagalaxy", "evomag", "auto", "proleasing"])
             ]
-            return grocery_providers if grocery_providers else [p for p in all_for_country if "auchan" in p.store_id.lower() or "emag" in p.store_id.lower()]
+            return grocery_providers if grocery_providers else [p for p in all_for_country if "auchan" in getattr(p, "store_id", "").lower() or "emag" in getattr(p, "store_id", "").lower()]
 
         # If tech / hardware / gaming / electronics
         is_tech = detected in ["STANDALONE_GPU", "TECH_HARDWARE"] or any(
@@ -344,9 +344,10 @@ class SearchEngine:
             # Query top tech specialists + flagship marketplace
             tech_providers = [
                 p for p in all_for_country
-                if p.category in [ProductCategory.TECH_HARDWARE, ProductCategory.GENERAL]
-                and not any(x in p.store_id.lower() for x in ["auto", "proleasing", "dedeman", "hornbach", "leroy", "mega", "freshful", "sezamo", "kaufland", "bringo"])
+                if getattr(p, "category", ProductCategory.GENERAL) in [ProductCategory.TECH_HARDWARE, ProductCategory.GENERAL]
+                and not any(x in getattr(p, "store_id", "").lower() for x in ["auto", "proleasing", "dedeman", "hornbach", "leroy", "mega", "freshful", "sezamo", "kaufland", "bringo"])
             ]
+            return tech_providers if tech_providers else all_for_country[:6]
             return tech_providers if tech_providers else all_for_country[:6]
 
         # Default general query: prioritize top 6 general & specialized platforms
