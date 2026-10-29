@@ -27,8 +27,15 @@ fi
 $PYTHON server.py 8001 &
 PY_PID=$!
 
-# Wait briefly for Python worker to bind
-sleep 1.5
+# Wait for Python worker to bind and be ready
+echo "⏳ Waiting for Python Scraper Worker to initialize..."
+for i in {1..20}; do
+  if curl -s http://127.0.0.1:8001/api/countries > /dev/null 2>&1; then
+    echo "✅ Python Scraper Worker is live and ready on port 8001!"
+    break
+  fi
+  sleep 0.3
+done
 
 # 2. Start Rust Gateway on port 3000
 echo "🦀 Starting Rust Axum Gateway on http://localhost:3000 ..."
