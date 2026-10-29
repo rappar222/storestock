@@ -1308,7 +1308,6 @@ function setLocation(name, lat, lon) {
 const aiIntentBanner = document.getElementById('aiIntentBanner');
 const aiCanonicalName = document.getElementById('aiCanonicalName');
 const aiDescription = document.getElementById('aiDescription');
-const aiSynonyms = document.getElementById('aiSynonyms');
 
 function renderAiIntent(intent) {
   if (!intent || !intent.canonical_name) {
@@ -1320,24 +1319,6 @@ function renderAiIntent(intent) {
   if (aiCanonicalName) aiCanonicalName.textContent = intent.canonical_name;
   if (aiDescription) {
     aiDescription.textContent = intent.description || "Prioritizing direct product matches and in-stock inventory.";
-  }
-
-  if (aiSynonyms && intent.synonyms && intent.synonyms.length > 1) {
-    aiSynonyms.innerHTML = '';
-    aiSynonyms.classList.remove('hidden');
-    intent.synonyms.slice(0, 3).forEach(syn => {
-      if (syn.toLowerCase() === searchInput.value.toLowerCase().trim()) return;
-      const btn = document.createElement('button');
-      btn.className = "px-2 py-0.5 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[10px] font-semibold transition";
-      btn.textContent = `Try: ${syn}`;
-      btn.onclick = () => {
-        searchInput.value = syn;
-        executeSearch(syn);
-      };
-      aiSynonyms.appendChild(btn);
-    });
-  } else if (aiSynonyms) {
-    aiSynonyms.classList.add('hidden');
   }
 
   if (window.lucide) safeRenderIcons();
@@ -1534,9 +1515,6 @@ function triggerDeferredImageLoading() {
   }
 }
 
-// Search Mode: Pure Client Mode (Protects Server IP from bans)
-const currentSearchMode = 'client';
-
 // Live Streaming Search via SSE
 function executeSearch(query) {
   if (!query || !query.trim()) {
@@ -1584,54 +1562,8 @@ function executeSearch(query) {
   renderLatencyDisplay();
 
   let url = `/api/stream?q=${encodeURIComponent(query.trim())}&country=${country}`;
-  if (currentSearchMode === 'client') {
-    url += `&cached_only=true`;
-  }
   if (userCoords) {
     url += `&lat=${userCoords.lat}&lon=${userCoords.lon}`;
-  }
-
-  // If Client Mode is active, scrape directly in the user's browser to protect TrueNAS server IP!
-  if (currentSearchMode === 'client' && window.StoreStockClientSearch) {
-    window.StoreStockClientSearch.searchAll(query.trim(), country, (p) => {
-      if (thisBatchId !== currentSearchBatchId) return;
-      renderStorePill(p.store_name, p.items.length, p.elapsed_ms, p.items || [], false);
-      if (p.items && p.items.length > 0) {
-        const urlMap = new Map(currentResults.map((r, idx) => [r.product_url, idx]));
-        p.items.forEach(newItem => {
-          if (urlMap.has(newItem.product_url)) {
-            const idx = urlMap.get(newItem.product_url);
-            currentResults[idx] = newItem;
-          } else {
-            currentResults.push(newItem);
-            urlMap.set(newItem.product_url, currentResults.length - 1);
-          }
-        });
-        if (timingStats.dataElapsed === null) {
-          timingStats.dataReadyTime = performance.now();
-          timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
-          renderLatencyDisplay();
-        }
-        renderResults();
-        renderBrandChips();
-        updateMapMarkers();
-        updateStats();
-      }
-    }).finally(() => {
-      if (thisBatchId === currentSearchBatchId) {
-        loadingIndicator.classList.add('hidden');
-        timingStats.streamDone = true;
-        if (timingStats.dataElapsed === null) {
-          timingStats.dataReadyTime = performance.now();
-          timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
-        }
-        renderLatencyDisplay();
-        updateStats();
-        if (currentResults.length === 0) {
-          emptyState.classList.remove('hidden');
-        }
-      }
-    });
   }
 
   const eventSource = new EventSource(url);

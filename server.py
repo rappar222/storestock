@@ -117,7 +117,7 @@ async def stream_endpoint(
     country: str = Query("RO", description="ISO 2-letter country code"),
     lat: Optional[float] = Query(None, description="User latitude for distance calculation"),
     lon: Optional[float] = Query(None, description="User longitude for distance calculation"),
-    cached_only: bool = Query(True, description="Only return instant cache without server outbound scrapes to protect server IP")
+    cached_only: bool = Query(False, description="Only return instant cache without server outbound scrapes")
 ):
     """
     Server-Sent Events (SSE) streaming endpoint:
