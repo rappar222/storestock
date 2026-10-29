@@ -1595,10 +1595,28 @@ function executeSearch(query) {
         renderAiIntent(data.payload);
       } else if (data.type === 'provider_result') {
         const p = data.payload;
-        renderStorePill(p.store_name, p.items.length, p.elapsed_ms, p.items || []);
+        renderStorePill(p.store_name, p.items.length, p.elapsed_ms, p.items || [], p.is_instant_cache);
 
         if (p.items && p.items.length > 0) {
-          currentResults.push(...p.items);
+          const urlMap = new Map(currentResults.map((r, idx) => [r.product_url, idx]));
+          p.items.forEach(newItem => {
+            if (urlMap.has(newItem.product_url)) {
+              // Update in-place with latest price/stock from live revalidation
+              const idx = urlMap.get(newItem.product_url);
+              currentResults[idx] = newItem;
+            } else {
+              currentResults.push(newItem);
+              urlMap.set(newItem.product_url, currentResults.length - 1);
+            }
+          });
+
+          // If this was instant cache, measure dataReadyTime immediately so user sees < 5ms!
+          if (p.is_instant_cache && timingStats.dataElapsed === null) {
+            timingStats.dataReadyTime = performance.now();
+            timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
+            renderLatencyDisplay();
+          }
+
           renderResults();
           renderBrandChips();
           updateMapMarkers();
@@ -1637,10 +1655,14 @@ function executeSearch(query) {
   };
 }
 
-function renderStorePill(storeName, count, elapsedMs, items = []) {
-  const pill = document.createElement('button');
-  pill.type = 'button';
-  pill.setAttribute('data-store', storeName);
+function renderStorePill(storeName, count, elapsedMs, items = [], isInstantCache = false) {
+  let pill = storesProgress.querySelector(`.store-pill[data-store="${storeName}"]`);
+  const isNew = !pill;
+  if (isNew) {
+    pill = document.createElement('button');
+    pill.type = 'button';
+    pill.setAttribute('data-store', storeName);
+  }
   pill.setAttribute('data-count', count);
   pill.title = count > 0 ? `Click to filter by ${storeName} only` : `0 results found in ${storeName}`;
 
@@ -1673,29 +1695,32 @@ function renderStorePill(storeName, count, elapsedMs, items = []) {
     }
   }
 
+  const cacheBadge = isInstantCache ? '<span class="text-emerald-400 font-bold">⚡cache </span>' : '';
   pill.className = baseClass;
   pill.innerHTML = `
     <span class="w-2 h-2 rounded-full shrink-0 ${dotClass}" title="${statusDesc}"></span>
     <span>${storeName}:</span>
     <span class="text-white font-bold">${count} found</span>
-    <span class="text-slate-500 text-[10px]">(${elapsedMs}ms)</span>
+    <span class="text-slate-500 text-[10px]">(${cacheBadge}${elapsedMs}ms)</span>
   `;
 
-  pill.onclick = () => {
-    if (activeBrand === storeName) {
-      activeBrand = null; // Toggle off filter
-      showToast(`Showing all stores`);
-    } else {
-      activeBrand = storeName;
-      showToast(`Filtered by ${storeName} (${count} found)`);
-    }
-    updateStorePillsUI();
-    renderResults();
-    renderBrandChips();
-    updateMapMarkers();
-  };
+  if (isNew) {
+    pill.onclick = () => {
+      if (activeBrand === storeName) {
+        activeBrand = null; // Toggle off filter
+        showToast(`Showing all stores`);
+      } else {
+        activeBrand = storeName;
+        showToast(`Filtered by ${storeName} (${count} found)`);
+      }
+      updateStorePillsUI();
+      renderResults();
+      renderBrandChips();
+      updateMapMarkers();
+    };
 
-  storesProgress.appendChild(pill);
+    storesProgress.appendChild(pill);
+  }
 }
 
 function updateStorePillsUI() {

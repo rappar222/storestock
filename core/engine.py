@@ -8,6 +8,7 @@ from core.relevance import calculate_relevance
 from core.branches import attach_branch_info
 from core.alerts import AlertManager
 from core.ai_intent import analyze_user_intent, score_with_ai_intent
+from core.cache_db import PersistentSearchCache
 from providers.base import BaseProvider
 from providers.ro.emag import EmagProvider
 from providers.ro.altex import AltexProvider
@@ -63,6 +64,7 @@ from providers.jp.yodobashi import YodobashiJPProvider
 class SearchEngine:
     def __init__(self):
         self.alert_manager = AlertManager()
+        self.persistent_cache = PersistentSearchCache()
 
         self.providers: Dict[str, List[BaseProvider]] = {
             "RO": [
@@ -481,7 +483,7 @@ class SearchEngine:
             "payload": ai_intent
         }
 
-        # 1. High-speed cache check (< 1ms)
+        # 1. High-speed in-memory cache check (< 1ms)
         cache_key = f"{country_code}:{query.lower().strip()}"
         if cache_key in self._cache:
             cached_time, cached_results, cached_intent = self._cache[cache_key]
@@ -497,10 +499,31 @@ class SearchEngine:
                             "store_name": store_name,
                             "store_icon": items[0].store_icon if items else "shopping-bag",
                             "elapsed_ms": 0.5,
+                            "is_instant_cache": True,
                             "items": [r.model_dump() for r in items]
                         }
                     }
                 return
+
+        # 2. TrueNAS Persistent Disk Cache Check (< 2ms)
+        # Yields existing catalog immediately to browser while live scrapers run in parallel!
+        cached_disk_items = await asyncio.to_thread(self.persistent_cache.get_cached_results, query, country_code)
+        if cached_disk_items:
+            store_items: Dict[str, list] = {}
+            for it in cached_disk_items:
+                store_items.setdefault(it.store_name, []).append(it)
+
+            for store_name, items in store_items.items():
+                yield {
+                    "type": "provider_result",
+                    "payload": {
+                        "store_name": store_name,
+                        "store_icon": items[0].store_icon if items else "shopping-bag",
+                        "elapsed_ms": 1.2,
+                        "is_instant_cache": True,
+                        "items": [r.model_dump() for r in items]
+                    }
+                }
 
         synonyms = ai_intent.get("synonyms", [])
         alt_query = synonyms[0] if synonyms and synonyms[0].lower() != query.lower().strip() else None
@@ -562,14 +585,21 @@ class SearchEngine:
                         "payload": res
                     }
                     if res.get("items"):
+                        parsed_items = []
                         for it_data in res["items"]:
                             try:
-                                cached_items_to_save.append(StoreResult(**it_data))
+                                parsed_items.append(StoreResult(**it_data))
                             except Exception:
                                 pass
+                        if parsed_items:
+                            cached_items_to_save.extend(parsed_items)
+                            # Persist to SQLite in non-blocking background thread
+                            asyncio.create_task(
+                                asyncio.to_thread(self.persistent_cache.save_results, query, country_code, parsed_items)
+                            )
             except Exception:
                 pass
 
-        # Cache results in memory
+        # Cache results in memory for instantaneous re-access
         if cached_items_to_save:
             self._cache[cache_key] = (time.time(), cached_items_to_save, ai_intent)
