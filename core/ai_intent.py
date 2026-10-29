@@ -23,6 +23,18 @@ DISCRETE_GPU_INDICATORS: Set[str] = {
     "placa video", "placi video", "graphics card", "video card", "gpu"
 }
 
+# Cosmetics / Beauty words that should never match drinking milk or groceries
+COSMETIC_WORDS: Set[str] = {
+    "de corp", "corp", "demachiant", "lotiune", "lotion", "crema", "cream",
+    "hidratant", "hidratanta", "solar", "solara", "bronzare", "plaja",
+    "gel de dus", "sampon", "cosmetic", "parfum", "antirid", "scrub",
+    "exfoliant", "cleanser", "serum", "masca ten", "lapte corp"
+}
+
+CHEESE_WORDS: Set[str] = {
+    "cascaval", "telemea", "branza", "mozzarella", "parmezan", "cheddar", "brie", "camembert"
+}
+
 HARDWARE_SYNONYMS: Dict[str, Dict] = {
     "a6000": {
         "canonical_name": "NVIDIA RTX A6000 / RTX 6000 Ada (48GB)",
@@ -66,6 +78,65 @@ HARDWARE_SYNONYMS: Dict[str, Dict] = {
     }
 }
 
+GROCERY_INTENTS: Dict[str, Dict] = {
+    "lapte": {
+        "canonical_name": "Lapte (Consum, UHT & Lactate)",
+        "category_intent": "GROCERIES_MILK",
+        "search_synonyms": ["lapte uht", "lapte bio", "lapte 3.5%", "lapte vegetal"],
+        "description": "Prioritizing fresh, UHT & dairy drinking milk. Demoting cosmetics (lapte de corp) and cheeses.",
+        "is_component": False
+    },
+    "milk": {
+        "canonical_name": "Milk (Dairy & Plant Milk)",
+        "category_intent": "GROCERIES_MILK",
+        "search_synonyms": ["whole milk", "oat milk", "almond milk", "uht milk"],
+        "description": "Prioritizing fresh, organic and UHT drinking milk. Filtering body lotions & cheese.",
+        "is_component": False
+    },
+    "paine": {
+        "canonical_name": "Pâine & Produse de Brutărie",
+        "category_intent": "GROCERIES_BAKERY",
+        "search_synonyms": ["paine feliata", "paine secara", "paine integrala"],
+        "description": "Prioritizing fresh bakery loaves & sliced bread.",
+        "is_component": False
+    },
+    "unt": {
+        "canonical_name": "Unt de Masă (Lactate)",
+        "category_intent": "GROCERIES_DAIRY",
+        "search_synonyms": ["unt 82%", "unt 65%", "unt bio"],
+        "description": "Prioritizing dairy butter for cooking and spreading.",
+        "is_component": False
+    },
+    "oua": {
+        "canonical_name": "Ouă Proaspete",
+        "category_intent": "GROCERIES_EGGS",
+        "search_synonyms": ["oua ecologice", "oua marimea l", "oua prepelita"],
+        "description": "Prioritizing fresh farm & organic eggs.",
+        "is_component": False
+    },
+    "cafea": {
+        "canonical_name": "Cafea (Boabe / Măcinată / Capsule)",
+        "category_intent": "GROCERIES_COFFEE",
+        "search_synonyms": ["cafea boabe", "cafea macinata", "capsule cafea"],
+        "description": "Prioritizing genuine coffee beans, ground blends & capsules over machines.",
+        "is_component": False
+    },
+    "iphone": {
+        "canonical_name": "Apple iPhone Smartphone",
+        "category_intent": "PHONE_DEVICE",
+        "search_synonyms": ["iphone 16 pro", "iphone 16", "iphone 15 pro", "iphone 15"],
+        "description": "Prioritizing standalone iPhone devices over phone cases, adapters and cables.",
+        "is_component": False
+    },
+    "ps5": {
+        "canonical_name": "Sony PlayStation 5 Console",
+        "category_intent": "CONSOLE_DEVICE",
+        "search_synonyms": ["playstation 5 slim", "ps5 slim", "consola ps5"],
+        "description": "Prioritizing PlayStation 5 consoles over accessories and skins.",
+        "is_component": False
+    }
+}
+
 def analyze_user_intent(query: str) -> Dict:
     q_clean = query.lower().strip()
     
@@ -83,31 +154,51 @@ def analyze_user_intent(query: str) -> Dict:
             "synonyms": [query]
         }
 
+    # Check hardware
     matched_entry = None
     for key, data in HARDWARE_SYNONYMS.items():
         if re.search(r"\b" + re.escape(key) + r"\b", q_clean):
             matched_entry = data
             break
 
+    # Check groceries & tech
+    if not matched_entry:
+        for key, data in GROCERY_INTENTS.items():
+            if re.search(r"\b" + re.escape(key) + r"\b", q_clean):
+                matched_entry = data
+                break
+
+    # Dynamic fallback: guarantee an intelligent intent banner for ANY search!
+    if not matched_entry:
+        matched_entry = {
+            "canonical_name": f"{query.strip().title()}",
+            "category_intent": "GENERAL_SMART",
+            "search_synonyms": [query.strip()],
+            "description": f"Searching real-time inventory for '{query.strip()}'. Prioritizing direct product matches and verified store stock.",
+            "is_component": False
+        }
+
     user_wants_system = any(term in q_clean for term in ["desktop", "server", "sistem", "workstation", "laptop", "pc complet"])
     user_wants_accessory = any(acc in q_clean for acc in ACCESSORY_AND_PART_KEYWORDS)
+    user_wants_cosmetic = any(c in q_clean for c in ["corp", "demachiant", "crema", "lotiune", "cosmetice"])
 
     return {
         "original_query": query,
-        "detected_intent": matched_entry["category_intent"] if matched_entry else "GENERAL",
-        "canonical_name": matched_entry["canonical_name"] if matched_entry else None,
-        "description": matched_entry["description"] if matched_entry else None,
-        "is_component": matched_entry["is_component"] if matched_entry else False,
+        "detected_intent": matched_entry["category_intent"],
+        "canonical_name": matched_entry["canonical_name"],
+        "description": matched_entry["description"],
+        "is_component": matched_entry.get("is_component", False),
         "user_wants_system": user_wants_system,
         "user_wants_accessory": user_wants_accessory,
-        "synonyms": matched_entry["search_synonyms"] if matched_entry else [query]
+        "user_wants_cosmetic": user_wants_cosmetic,
+        "synonyms": matched_entry.get("search_synonyms", [query])
     }
 
 def score_with_ai_intent(query: str, title: str, price: float, in_stock: bool, intent_info: Optional[Dict] = None) -> float:
     """
     Strict hierarchical AI relevance:
-    Actual Card >>> Out-of-Stock Card >>> Prebuilt Server >>> Power Cable / NVLink Bridge
-    An in-stock cable or server must NEVER outrank an actual GPU card!
+    Actual Milk >>> Out-of-Stock Milk >>> Cheese >>> Body Lotion / Cosmetics
+    Actual GPU Card >>> Out-of-Stock Card >>> Prebuilt Server >>> Power Cable / NVLink Bridge
     """
     if not intent_info:
         intent_info = analyze_user_intent(query)
@@ -120,37 +211,57 @@ def score_with_ai_intent(query: str, title: str, price: float, in_stock: bool, i
 
     user_asked_acc = intent_info.get("user_wants_accessory", False)
     user_asked_sys = intent_info.get("user_wants_system", False)
-    is_gpu_intent = intent_info.get("detected_intent") == "STANDALONE_GPU"
+    user_asked_cosmetic = intent_info.get("user_wants_cosmetic", False)
+    detected_intent = intent_info.get("detected_intent", "GENERAL")
 
-    # 1. Accessory Demotion (Cables, NVLink Bridges, Brackets, Stands)
+    # 1. Milk / Dairy Intent Disambiguation
+    if detected_intent == "GROCERIES_MILK":
+        # Severe penalty for cosmetics (lapte de corp, crema, demachiant)
+        is_cosmetic = any(c in t_clean for c in COSMETIC_WORDS)
+        if is_cosmetic and not user_asked_cosmetic:
+            score -= 600.0
+
+        # Severe penalty for cheese (cascaval, telemea, mozzarella)
+        is_cheese = any(re.search(r"\b" + re.escape(ch) + r"\b", t_clean) for ch in CHEESE_WORDS)
+        if is_cheese and "lapte" not in q_clean.replace("lapte", ""):
+            score -= 400.0
+
+        # Dominant boost for actual dairy drinking milk
+        has_milk_word = re.search(r"\blapte\b|\bmilk\b", t_clean) is not None
+        if has_milk_word and not is_cosmetic:
+            score += 300.0
+            if t_clean.startswith("lapte") or t_clean.startswith("milk"):
+                score += 150.0
+            if any(k in t_clean for k in ["uht", "3.5%", "1.5%", "bio", "vaca", "capra", "zuzu", "napolact", "albalact", "olympus"]):
+                score += 100.0
+        elif not has_milk_word:
+            # If title doesn't even contain the word 'lapte', severely demote it
+            score -= 500.0
+
+    # 2. Accessory Demotion (Cables, NVLink Bridges, Brackets, Stands)
     is_accessory = any(re.search(r"\b" + re.escape(acc) + r"\b", t_clean) for acc in ACCESSORY_AND_PART_KEYWORDS)
     if is_accessory and not user_asked_acc:
-        # Severe penalty: Cables and NVLink bridges can NEVER beat the actual card
         score -= 500.0
 
-    # 2. Prebuilt System Demotion (Server racks, 280,000 RON desktop towers)
+    # 3. Prebuilt System Demotion (Server racks, 280,000 RON desktop towers)
     is_prebuilt = any(p in t_clean for p in PREBUILT_SERVER_KEYWORDS)
     if is_prebuilt and not user_asked_sys:
         score -= 400.0
 
-    # 3. Discrete Graphics Card Component Detection
+    # 4. Discrete Graphics Card Component Detection
     is_discrete_card = any(d in t_clean for d in DISCRETE_GPU_INDICATORS) or "rtx a6000" in t_clean or "rtx 6000" in t_clean
-    if is_gpu_intent and is_discrete_card and not is_accessory and not is_prebuilt:
-        score += 350.0  # Dominant boost for actual graphics card listings!
+    if detected_intent == "STANDALONE_GPU" and is_discrete_card and not is_accessory and not is_prebuilt:
+        score += 350.0
 
-    # 4. Token Matching
+    # 5. Token Matching & Coverage
     matched_tokens = [t for t in q_tokens if re.search(r"\b" + re.escape(t) + r"\b", t_clean)]
     if q_tokens:
         coverage = len(matched_tokens) / len(q_tokens)
-        score += coverage * 100.0
+        score += coverage * 120.0
+        if coverage < 1.0:
+            score -= 80.0 * (1.0 - coverage)
 
-    # 5. Price Sanity Floor for Enterprise Hardware
-    if is_gpu_intent and not user_asked_acc:
-        if 0.0 < price < 1500.0:
-            # Nothing selling for 255 RON or 1490 RON is a 48GB A6000 GPU
-            score -= 300.0
-
-    # 6. In-Stock Priority (Only adds +50 so it CANNOT cause a cable to beat a real card)
+    # 6. In-Stock Priority
     if in_stock:
         score += 50.0
 

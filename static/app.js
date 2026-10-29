@@ -52,7 +52,7 @@ const openNewAlertModalBtn = document.getElementById('openNewAlertModalBtn');
 const toast = document.getElementById('toast');
 const toastMsg = document.getElementById('toastMsg');
 
-// Accessory & Hardware scoring constants for Smart Recommended Ranking
+// Accessory, Hardware & Category scoring constants for Smart Recommended Ranking
 const ACCESSORY_WORDS = [
   "stand", "suport", "holder", "bracket", "riser", "cablu", "cable",
   "husa", "case", "adaptor", "adapter", "pasta", "paste", "thermal",
@@ -66,6 +66,17 @@ const HARDWARE_WORDS = [
   "placa video", "placi video", "graphics card", "video card", "gpu"
 ];
 
+const COSMETIC_WORDS = [
+  "de corp", "corp", "demachiant", "lotiune", "lotion", "crema", "cream",
+  "hidratant", "hidratanta", "solar", "solara", "bronzare", "plaja",
+  "gel de dus", "sampon", "cosmetic", "parfum", "antirid", "scrub",
+  "exfoliant", "cleanser", "serum", "masca ten", "lapte corp"
+];
+
+const CHEESE_WORDS = [
+  "cascaval", "telemea", "branza", "mozzarella", "parmezan", "cheddar", "brie", "camembert"
+];
+
 function scoreRelevance(query, title, price, inStock) {
   const qClean = (query || "").toLowerCase().trim();
   const tClean = (title || "").toLowerCase().trim();
@@ -75,14 +86,42 @@ function scoreRelevance(query, title, price, inStock) {
 
   let score = 0;
 
+  // 1. Milk / Dairy Intent Disambiguation (Lapte != Lapte de corp, Lapte != Cascaval)
+  const isMilkQuery = /\blapte\b|\bmilk\b/.test(qClean);
+  if (isMilkQuery) {
+    const userWantsCosmetic = ["corp", "demachiant", "crema", "lotiune", "cosmetice"].some(w => qClean.includes(w));
+    const titleIsCosmetic = COSMETIC_WORDS.some(w => tClean.includes(w));
+    if (titleIsCosmetic && !userWantsCosmetic) {
+      score -= 700; // Heavily demote body lotions and cosmetics below all groceries
+    }
+
+    const titleIsCheese = CHEESE_WORDS.some(w => new RegExp(`\\b${w}\\b`).test(tClean));
+    if (titleIsCheese && !qClean.includes("cascaval") && !qClean.includes("branza")) {
+      score -= 500; // Heavily demote cheeses when searching for milk
+    }
+
+    const hasMilkWord = /\blapte\b|\bmilk\b/.test(tClean);
+    if (hasMilkWord && !titleIsCosmetic) {
+      score += 400; // Dominant boost for actual drinking milk
+      if (tClean.startsWith("lapte") || tClean.startsWith("milk")) {
+        score += 200; // High priority for products beginning with "Lapte"
+      }
+      if (["uht", "3.5%", "1.5%", "bio", "vaca", "capra", "zuzu", "napolact", "albalact", "olympus", "fulga", "milli", "ladorna"].some(k => tClean.includes(k))) {
+        score += 150;
+      }
+    } else if (!hasMilkWord) {
+      score -= 400; // Item title lacks the word milk
+    }
+  }
+
+  // 2. Severe accessory penalty (Cables, stands, brackets)
   const userAskedAccessory = ACCESSORY_WORDS.some(acc => qClean.includes(acc));
   const titleHasAccessory = ACCESSORY_WORDS.some(acc => tClean.includes(acc));
-  
-  // Severe accessory penalty
   if (titleHasAccessory && !userAskedAccessory) {
     score -= 500;
   }
 
+  // 3. Prebuilt Systems & Servers vs Standalone Components
   const PREBUILTS = [
     "desktop pc", "server supermicro", "server dell", "server asus",
     "superworkstation", "sistem desktop", "workstation tower", "tower 2u",
@@ -93,32 +132,34 @@ function scoreRelevance(query, title, price, inStock) {
 
   const isGpu = ["rtx", "gtx", "radeon", "a6000", "blackwell", "geforce", "gpu"].some(k => qClean.includes(k));
   if (isGpu) {
-    // Dominant bonus for standalone graphics cards
     const isDiscreteCard = HARDWARE_WORDS.some(h => tClean.includes(h)) || tClean.includes("rtx a6000") || tClean.includes("rtx 6000");
     if (isDiscreteCard && !titleHasAccessory) {
       score += 350;
     }
     
-    // Penalize full server racks and whole PC towers
     if (!userWantsPrebuilt && PREBUILTS.some(p => tClean.includes(p))) {
       score -= 400;
     }
 
-    // Price sanity: an A6000 is not under 1500 RON
     if (price > 0 && price < 1500 && !userAskedAccessory) {
       score -= 300;
     }
   }
 
-  // Token matching
+  // 4. Token matching & coverage
   const matched = qTokens.filter(t => tClean.includes(t));
   const coverage = matched.length / qTokens.length;
-  score += coverage * 100;
+  score += coverage * 120;
 
-  if (coverage < 1.0) score -= 50 * (1.0 - coverage);
+  if (coverage < 1.0) score -= 60 * (1.0 - coverage);
 
-  // In-stock priority bonus (moderate, so it never causes a cable to beat a card)
-  if (inStock) score += 50;
+  // Position bonus: product title starts with the exact query
+  if (tClean.startsWith(qClean)) {
+    score += 50;
+  }
+
+  // In-stock priority bonus
+  if (inStock) score += 60;
 
   return score;
 }
@@ -1276,9 +1317,7 @@ function renderAiIntent(intent) {
   aiIntentBanner.classList.remove('hidden');
   if (aiCanonicalName) aiCanonicalName.textContent = intent.canonical_name;
   if (aiDescription) {
-    aiDescription.textContent = intent.description 
-      ? `${intent.description} • Demoting full desktop towers & server racks to find the standalone card.` 
-      : "Filtered out full desktop towers and server racks. Prioritizing standalone GPU cards.";
+    aiDescription.textContent = intent.description || "Prioritizing direct product matches and in-stock inventory.";
   }
 
   if (aiSynonyms && intent.synonyms && intent.synonyms.length > 1) {
