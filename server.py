@@ -172,6 +172,22 @@ async def delete_alert(alert_id: str):
         raise HTTPException(status_code=404, detail="Alert not found")
     return {"status": "deleted", "id": alert_id}
 
+@app.get("/api/database/stats")
+async def database_stats_endpoint():
+    """
+    Returns real-time diagnostics and metadata about the active storage engine
+    (engine type, disk size, total cached objects, in-stock count, unique stores).
+    """
+    try:
+        from core.db import get_database_adapter
+        adapter = get_database_adapter()
+        return adapter.get_stats()
+    except Exception as e:
+        return {
+            "error": str(e),
+            "status": "unhealthy"
+        }
+
 # --- Feedback & Bug Report Background Dispatch Task ---
 
 def send_feedback_email_task(feedback_record: dict, screenshot_b64: Optional[str] = None):

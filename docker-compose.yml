@@ -9,6 +9,10 @@ services:
       - "3005:3000"
     environment:
       - PORT=3000
+      # Database Engine Selection (sqlite, postgres, etc.)
+      # Default: Ultra-fast local SQLite on /app/data/storestock_cache.db
+      - STORESTOCK_DB_TYPE=${STORESTOCK_DB_TYPE:-sqlite}
+      - DATABASE_URL=${DATABASE_URL:-}
       # SMTP Configuration for Feedback Dispatches
       - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
       - SMTP_PORT=${SMTP_PORT:-587}
