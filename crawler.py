@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 StoreStock Internet Scour & Catalog Seeder
-Scrapes random trending products across tech, groceries, essentials, and vehicles,
-saving them directly into the persistent database cache.
+Scrapes products across all 50 supported countries and multiple categories,
+saving verified store prices, stock, and images directly into the persistent database cache.
 """
 
 import sys
@@ -10,117 +10,137 @@ import time
 import random
 import asyncio
 import argparse
-from typing import List, Dict
+from typing import List, Dict, Optional, Tuple
 from core.engine import SearchEngine
 from core.db import get_database_adapter
+from core.countries import COUNTRIES_REGISTRY
 from core.schema import StoreResult
 
-# Curated catalog of high-demand search queries across multiple categories
-SEED_CATALOG: Dict[str, List[str]] = {
+# Globally recognizable products that work across all 50 international countries
+GLOBAL_QUERIES: Dict[str, List[str]] = {
     "GPUs & Components": [
         "rtx 5090", "rtx 5080", "rtx 5070", "rtx 4090", "rtx 4080 super",
-        "rtx 4070 ti super", "rtx 4060 ti", "rx 7900 xtx", "rx 7800 xt", "rtx a6000",
-        "ryzen 7 7800x3d", "ryzen 9 9950x", "intel core i9 14900k", "core i7 14700k",
-        "ssd samsung 990 pro 2tb", "ssd kingston kc3000", "ram ddr5 32gb corsair",
-        "sursa seasonic 850w", "placa de baza b650 asus", "cooler noctua nh-d15"
+        "rtx 4070 ti super", "rx 7900 xtx", "rtx a6000", "ryzen 7 7800x3d",
+        "ryzen 9 9950x", "intel core i9 14900k", "samsung 990 pro 2tb",
+        "corsair ddr5 32gb", "seasonic 850w", "asus rog strix b650"
     ],
-    "Laptops & Tech": [
-        "macbook pro m3", "macbook air m2", "asus rog zephyrus", "lenovo legion 5",
-        "dell xps 15", "ipad air", "iphone 16 pro max", "iphone 15",
-        "samsung galaxy s24 ultra", "google pixel 8 pro", "tableta xiaomi pad"
+    "Laptops & Smartphones": [
+        "macbook pro m3", "macbook air m2", "iphone 16 pro max", "iphone 15 pro",
+        "samsung galaxy s24 ultra", "google pixel 8 pro", "asus rog zephyrus",
+        "lenovo legion 5", "dell xps 15", "ipad air m2"
     ],
-    "Gaming & Displays": [
-        "consola ps5 slim", "xbox series x", "nintendo switch oled",
-        "monitor oled 144hz", "monitor gaming 27 144hz", "tastatura mecanica wireless",
-        "mouse logitech g pro x superlight", "casti hyperx cloud 2 wireless",
-        "volan logitech g29", "scaun gaming secretlab"
+    "Gaming & Tech": [
+        "playstation 5 slim", "xbox series x", "nintendo switch oled",
+        "sony wh-1000xm5", "airpods pro 2", "logitech g pro x superlight",
+        "hyperx cloud 2", "lg oled 55", "samsung 65 qled tv"
     ],
-    "Groceries & Dairy": [
-        "lapte 3.5%", "lapte uht olympus", "lapte napolact 3.5%", "lapte zuzu bio",
-        "unt 82%", "unt napolact", "unt albalact 65%",
-        "paine feliata toast", "paine integrala secara", "oua proaspete marimea l",
-        "cafea boabe lavazza 1kg", "cafea boabe illy", "cafea capsule nespresso",
-        "ulei floarea soarelui 1l", "zahar margaritar 1kg", "faina alba 000 baneasa",
-        "apa plata dorna 2l", "cascaval rucar", "iaurt grecesc 10% olympus"
-    ],
-    "Appliances & Home": [
-        "aspirator robot roborock", "televizor oled lg 55", "televizor samsung qled",
-        "espressor delonghi magnifica", "air fryer philips xxl", "masina de spalat rufe bosch",
-        "cuptor cu microunde", "frigider no frost beko", "purificator aer xiaomi"
-    ],
-    "Automotive & Essentials": [
-        "ulei motor castrol 5w30", "ulei motor motul 5w40", "baterie auto varta 74ah",
-        "anvelope iarna 205 55 r16", "anvelope all season michelin", "compresor auto portabil",
-        "lichid parbriz iarna", "dacia duster", "bmw seria 3", "volkswagen golf 7"
+    "Home & Vehicles": [
+        "dyson v15 detect", "roborock s8", "delonghi magnifica",
+        "philips airfryer xxl", "tesla model 3", "bmw 3 series", "volkswagen golf"
     ]
 }
 
-def get_flattened_catalog() -> List[tuple[str, str]]:
-    """Returns a list of (category, query) tuples."""
-    items = []
-    for cat, queries in SEED_CATALOG.items():
-        for q in queries:
-            items.append((cat, q))
-    return items
+# Romanian local market items (Fresh groceries, local cars & tech)
+RO_LOCAL_QUERIES: Dict[str, List[str]] = {
+    "Groceries & Dairy (RO)": [
+        "lapte 3.5%", "lapte uht olympus", "lapte napolact 3.5%", "lapte zuzu bio",
+        "unt 82%", "unt napolact", "unt albalact 65%",
+        "paine feliata toast", "paine integrala secara", "oua proaspete marimea l",
+        "cafea boabe lavazza 1kg", "cafea boabe illy", "ulei floarea soarelui 1l",
+        "zahar margaritar 1kg", "faina alba 000 baneasa", "apa plata dorna 2l",
+        "cascaval rucar", "iaurt grecesc 10% olympus"
+    ],
+    "Automotive & Local (RO)": [
+        "dacia duster", "ulei motor castrol 5w30", "baterie auto varta 74ah",
+        "anvelope iarna 205 55 r16", "compresor auto portabil"
+    ]
+}
+
+def get_country_metadata(code: str) -> Tuple[str, str, str]:
+    """Returns (Flag, Country Name, Currency) for a given country code."""
+    c_info = COUNTRIES_REGISTRY.get(code.upper(), {})
+    flag = c_info.get("flag", "🌐")
+    name = c_info.get("name", code.upper())
+    currency = c_info.get("currency", "USD")
+    return flag, name, currency
 
 async def run_crawler(
-    count: int = 15,
-    country: str = "RO",
-    delay_sec: float = 2.0,
+    countries: List[str],
+    count: int = 25,
+    delay_sec: float = 1.5,
     continuous: bool = False,
-    specific_query: str = None
+    sweep_mode: bool = False,
+    specific_query: Optional[str] = None
 ):
-    print("=" * 65)
-    print("🚀 StoreStock Automated Internet Scourer & Database Populator")
-    print(f"🌍 Target Country: {country.upper()}")
+    print("=" * 70)
+    print("🚀 StoreStock Multi-Country Internet Scourer & Database Populator")
+    print(f"🌍 Scope: {len(countries)} Supported Countries")
     print(f"⏱️ Inter-query Delay: {delay_sec}s")
-    print("=" * 65)
+    print("=" * 70)
 
     engine = SearchEngine()
     db = get_database_adapter()
 
     # Initial DB Stats
     initial_stats = db.get_stats()
-    print(f"📦 Starting Database State:")
+    print("📦 Starting Database State:")
     print(f"   Engine: {initial_stats.get('engine')} ({initial_stats.get('path', 'remote')})")
     print(f"   Cached Products: {initial_stats.get('total_cached_products', 0)}")
     print(f"   Storage Size: {initial_stats.get('file_size_human', '0 B')}")
-    print("=" * 65)
-
-    catalog = get_flattened_catalog()
-    random.shuffle(catalog)
-
-    queries_pool = []
-    if specific_query:
-        queries_pool = [("Manual Query", specific_query.strip())]
-    else:
-        queries_pool = catalog
+    print("=" * 70)
 
     processed_count = 0
     total_saved_this_run = 0
     start_time = time.time()
 
+    # Build work queue
+    work_items = []
+
+    if sweep_mode:
+        # Sweep mode: takes a single query or top queries and runs through EVERY country sequentially
+        sweep_queries = [specific_query] if specific_query else ["rtx 5090", "iphone 16", "macbook pro", "playstation 5"]
+        for q in sweep_queries:
+            for c_code in countries:
+                work_items.append((c_code, "Multi-Country Sweep", q))
+    else:
+        # Balanced sampling: randomize across countries and categories
+        for _ in range(count * 3):
+            c_code = random.choice(countries)
+            if specific_query:
+                work_items.append((c_code, "Manual Query", specific_query.strip()))
+            else:
+                if c_code == "RO" and random.random() < 0.45:
+                    cat = random.choice(list(RO_LOCAL_QUERIES.keys()))
+                    q = random.choice(RO_LOCAL_QUERIES[cat])
+                else:
+                    cat = random.choice(list(GLOBAL_QUERIES.keys()))
+                    q = random.choice(GLOBAL_QUERIES[cat])
+                work_items.append((c_code, cat, q))
+
+    target_total = len(work_items) if sweep_mode else count
+
     try:
         while True:
-            for cat, query in queries_pool:
-                if not continuous and processed_count >= count:
+            for c_code, cat, query in work_items:
+                if not continuous and processed_count >= target_total:
                     break
 
                 processed_count += 1
-                prefix = f"[{processed_count}]" if continuous else f"[{processed_count}/{count}]"
-                print(f"\n{prefix} 🌐 Scouring stores for: '{query}' ({cat})...")
+                flag, c_name, curr = get_country_metadata(c_code)
+                prefix = f"[{processed_count}]" if continuous else f"[{processed_count}/{target_total}]"
+
+                print(f"\n{prefix} {flag} {c_name} ({c_code}) | Scouring '{query}' ({cat})...")
 
                 query_items: List[StoreResult] = []
                 store_breakdown: Dict[str, int] = {}
                 q_start = time.time()
 
                 try:
-                    # Stream search across all relevant providers
-                    async for event in engine.stream_search(query, country_code=country):
+                    async for event in engine.stream_search(query, country_code=c_code):
                         if event.get("type") == "provider_result":
                             payload = event.get("payload", {})
                             items_data = payload.get("items", [])
-                            store_name = payload.get("store_name", "Unknown Store")
+                            store_name = payload.get("store_name", "Store")
 
                             if items_data:
                                 store_breakdown[store_name] = len(items_data)
@@ -130,17 +150,16 @@ async def run_crawler(
                                     except Exception:
                                         pass
                 except Exception as e:
-                    print(f"   ⚠️ Search error on '{query}': {e}")
+                    print(f"   ⚠️ Search error in {c_code} for '{query}': {e}")
 
                 elapsed = round(time.time() - q_start, 2)
 
-                # Persist items to database
                 if query_items:
-                    db.save_cached_products(query, country, query_items)
+                    db.save_cached_products(query, c_code, query_items)
                     total_saved_this_run += len(query_items)
 
-                    stores_str = ", ".join([f"{name} ({c})" for name, c in store_breakdown.items()])
-                    print(f"   ✅ Saved {len(query_items)} products in {elapsed}s: {stores_str}")
+                    stores_str = ", ".join([f"{name} ({count})" for name, count in store_breakdown.items()])
+                    print(f"   ✅ Saved {len(query_items)} products in {elapsed}s [{curr}]: {stores_str}")
                 else:
                     print(f"   ⚪ No products found in {elapsed}s.")
 
@@ -148,71 +167,83 @@ async def run_crawler(
                 stats = db.get_stats()
                 print(f"   💾 DB Total: {stats.get('total_cached_products')} items ({stats.get('file_size_human')}) across {stats.get('unique_stores')} stores")
 
-                # Respectful delay between queries
-                if (continuous or processed_count < count) and delay_sec > 0:
+                if (continuous or processed_count < target_total) and delay_sec > 0:
                     await asyncio.sleep(delay_sec)
 
             if not continuous:
                 break
-            # Reshuffle for next continuous pass
-            random.shuffle(queries_pool)
+            random.shuffle(work_items)
 
     except (KeyboardInterrupt, asyncio.CancelledError):
-        print("\n\n🛑 Crawler interrupted by user. Finalizing...")
+        print("\n\n🛑 Scourer interrupted by user. Finalizing...")
 
     total_time = round(time.time() - start_time, 1)
     final_stats = db.get_stats()
 
-    print("\n" + "=" * 65)
-    print("🏁 Scour Summary:")
+    print("\n" + "=" * 70)
+    print("🏁 Multi-Country Scour Summary:")
     print(f"   Queries Processed: {processed_count}")
     print(f"   Products Saved/Updated This Run: {total_saved_this_run}")
     print(f"   Final Database Records: {final_stats.get('total_cached_products')}")
     print(f"   Final Storage Size: {final_stats.get('file_size_human')}")
     print(f"   Total Time Elapsed: {total_time}s")
-    print("=" * 65)
+    print("=" * 70)
 
 def main():
     parser = argparse.ArgumentParser(
-        description="StoreStock Background Internet Scourer & Database Populator"
+        description="StoreStock Multi-Country Internet Scourer & Database Populator"
+    )
+    parser.add_argument(
+        "--countries", "-c",
+        type=str,
+        default="ALL",
+        help="Country codes to target: 'ALL' for all 50 countries, or comma-separated e.g. 'RO,US,DE,GB' (default: ALL)"
     )
     parser.add_argument(
         "--count", "-n",
         type=int,
-        default=15,
-        help="Number of random queries to scour (default: 15)"
-    )
-    parser.add_argument(
-        "--country", "-c",
-        type=str,
-        default="RO",
-        help="Target country code (RO, US, DE, GB, etc. default: RO)"
+        default=25,
+        help="Number of queries to scour (default: 25)"
     )
     parser.add_argument(
         "--delay", "-d",
         type=float,
-        default=2.0,
-        help="Delay in seconds between store queries (default: 2.0)"
+        default=1.5,
+        help="Delay in seconds between store queries (default: 1.5)"
     )
     parser.add_argument(
         "--continuous",
         action="store_true",
-        help="Keep running in the background indefinitely scouring random products"
+        help="Run continuously in background, cycling across all supported countries"
+    )
+    parser.add_argument(
+        "--sweep",
+        action="store_true",
+        help="Sweep mode: Scour a query systematically across every single one of the 50 countries"
     )
     parser.add_argument(
         "--query", "-q",
         type=str,
         default=None,
-        help="Scour for one specific query instead of random selection"
+        help="Scour for one specific query across countries"
     )
 
     args = parser.parse_args()
 
+    # Parse target countries
+    all_codes = list(COUNTRIES_REGISTRY.keys())
+    if args.countries.strip().upper() == "ALL":
+        target_countries = all_codes
+    else:
+        selected = [code.strip().upper() for code in args.countries.split(",") if code.strip()]
+        target_countries = [c for c in selected if c in COUNTRIES_REGISTRY] or ["RO"]
+
     asyncio.run(run_crawler(
+        countries=target_countries,
         count=args.count,
-        country=args.country,
         delay_sec=args.delay,
         continuous=args.continuous,
+        sweep_mode=args.sweep,
         specific_query=args.query
     ))
 
