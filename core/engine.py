@@ -311,6 +311,24 @@ class SearchEngine:
                 or "proleasing" in p.store_id.lower()
             ]
 
+        # If grocery / food / dairy query
+        if detected.startswith("GROCERIES") or any(
+            g in q_lower for g in [
+                "lapte", "milk", "paine", "bread", "unt", "butter", "oua", "eggs",
+                "cafea", "coffee", "branza", "cheese", "cascaval", "faina", "zahar",
+                "ulei", "carne", "pui", "bere", "vin", "apa", "iaurt", "smantana"
+            ]
+        ):
+            grocery_providers = [
+                p for p in all_for_country
+                if (p.category in [ProductCategory.GROCERIES, ProductCategory.GENERAL]
+                    or "auchan" in p.store_id.lower()
+                    or "emag" in p.store_id.lower()
+                    or "amazon" in p.store_id.lower())
+                and not any(x in p.store_id.lower() for x in ["pcgarage", "flanco", "altex", "mediagalaxy", "evomag", "auto", "proleasing"])
+            ]
+            return grocery_providers if grocery_providers else [p for p in all_for_country if "auchan" in p.store_id.lower() or "emag" in p.store_id.lower()]
+
         # If tech / hardware / gaming / electronics
         is_tech = detected in ["STANDALONE_GPU", "TECH_HARDWARE"] or any(
             t in q_lower for t in [
@@ -361,7 +379,7 @@ class SearchEngine:
                     results=cached_results
                 )
 
-        providers = self.get_providers_for_country(country_code)
+        providers = self.get_providers_for_query(query, country_code)
         
         # Determine queries: primary query + top AI synonym if applicable
         synonyms = ai_intent.get("synonyms", [])
@@ -454,8 +472,8 @@ class SearchEngine:
         user_lon: Optional[float] = None
     ) -> AsyncGenerator[Dict, None]:
         country_code = country_code.upper()
-        providers = self.get_providers_for_country(country_code)
-        ai_intent = analyze_user_intent(query)
+        ai_intent = analyze_user_intent(query, country_code)
+        providers = self.get_providers_for_query(query, country_code)
 
         # First yield the AI Intent detection payload to the UI
         yield {
