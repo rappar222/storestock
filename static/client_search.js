@@ -1,89 +1,28 @@
 /**
- * StoreStock 100% Client-Side Search & Distributed Cache Agent
- * Runs entirely on the user's client device/browser.
- * The TrueNAS server never makes outbound scraper calls to protect your server IP.
+ * StoreStock 100% Direct Client-Side Search Engine
+ * Runs completely on the user's laptop/browser.
+ * Direct fetch() from your browser to each store - ZERO proxies, ZERO server-side calls.
  */
 
 window.StoreStockClientSearch = (function () {
-  // Check if a URL has an open JSON API that supports direct browser fetch
-  function isDirectCorsAllowed(targetUrl) {
+  async function fetchWithFallback(targetUrl, timeoutMs = 6000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const parsed = new URL(targetUrl);
-      // VTEX Auchan public search API allows open CORS directly from browser
-      if (parsed.hostname.includes("auchan.ro") && parsed.pathname.includes("/api/catalog_system/")) {
-        return true;
-      }
-    } catch (e) {}
-    return false;
-  }
-
-  async function fetchWithFallback(targetUrl, timeoutMs = 4500) {
-    // Direct request from user's laptop browser to the retailer URL
-    // Every search sends the real HTTP request directly from your laptop IP!
-    try {
-      fetch(targetUrl, { mode: 'no-cors', cache: 'no-cache' }).catch(() => {});
-    } catch (e) {}
-
-    // Direct fetch for endpoints with open CORS headers (like Auchan VTEX API)
-    if (isDirectCorsAllowed(targetUrl)) {
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 3500);
-        const res = await fetch(targetUrl, {
-          signal: controller.signal,
-          headers: { 'Accept': 'application/json' }
-        });
-        clearTimeout(timer);
-        if (res.ok) {
-          const text = await res.text();
-          if (text && text.length > 50) return text;
+      const res = await fetch(targetUrl, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'text/html,application/xhtml+xml,application/xml,application/json;q=0.9,*/*;q=0.8'
         }
-      } catch (e) {}
-    }
-
-    // High-speed parallel race to parse the store's response on the client
-    const encoded = encodeURIComponent(targetUrl);
-    const bridges = [
-      `https://cors.eu.org/${targetUrl}`,
-      `https://api.allorigins.win/raw?url=${encoded}`,
-      `https://api.cors.lol/?url=${encoded}`
-    ];
-
-    async function tryBridge(bUrl) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      try {
-        const res = await fetch(bUrl, { signal: controller.signal });
-        clearTimeout(timer);
-        if (res.ok) {
-          const text = await res.text();
-          if (text && text.length > 150) return text;
-        }
-      } catch (e) {
-        clearTimeout(timer);
+      });
+      clearTimeout(timer);
+      if (res.ok) {
+        const text = await res.text();
+        if (text && text.length > 50) return text;
       }
-      throw new Error("Bridge attempt failed");
-    }
-
-    try {
-      // First active bridge that responds with valid content wins!
-      return await Promise.any(bridges.map(b => tryBridge(b)));
     } catch (e) {
-      // Strategy 3: JSON wrapper fallback
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 3500);
-        const res = await fetch(`https://api.allorigins.win/get?url=${encoded}`, { signal: controller.signal });
-        clearTimeout(timer);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.contents && data.contents.length > 150) {
-            return data.contents;
-          }
-        }
-      } catch (err) {}
+      clearTimeout(timer);
     }
-
     return null;
   }
 
