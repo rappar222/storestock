@@ -175,13 +175,6 @@
           <i data-lucide="chevron-down" class="w-3 h-3 text-slate-500"></i>
         </button>
 
-        <!-- Companion Extension Button -->
-        <button id="openExtensionModalBtn" class="flex items-center space-x-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-xl px-2.5 sm:px-3 py-1.5 text-xs font-bold text-emerald-400 transition shadow-sm shadow-emerald-500/10 cursor-pointer" title="StoreStock Companion: 100% Client-Side Search on your laptop">
-          <span id="extStatusDot" class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
-          <span id="extStatusText" class="font-bold">Extension</span>
-          <svg class="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>
-        </button>
-
         <!-- Country Selector -->
         <div class="flex items-center bg-slate-900 border border-slate-700/60 rounded-xl px-2.5 py-1.5 shadow-inner">
           <select id="countrySelect" class="bg-transparent text-xs sm:text-sm font-medium text-slate-200 outline-none cursor-pointer">
@@ -296,6 +289,7 @@
         </div>
       </div>
       <div id="storesProgress" class="flex flex-wrap items-center gap-2"></div>
+      <div id="storeSearchLinks" class="hidden flex flex-wrap items-center gap-2 text-[11px] text-slate-400 px-0.5"></div>
     </div>
 
     <!-- Dynamic Brand Filter Chips -->
@@ -366,22 +360,7 @@
         <i data-lucide="package-search" class="w-7 h-7"></i>
       </div>
       <h3 class="text-base font-semibold text-slate-300">No matching products found</h3>
-      <p class="text-xs text-slate-500 max-w-sm mx-auto">Stores blocked CORS in your browser. Install the StoreStock companion on your laptop to enable live store scraping.</p>
-      
-      <!-- Direct Extension Download Prompt Card -->
-      <div class="mt-4 p-4 rounded-2xl bg-slate-900/90 border border-emerald-500/30 max-w-md mx-auto text-left shadow-2xl">
-        <div class="flex items-center space-x-3 mb-2">
-          <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm shrink-0">🧩</div>
-          <div>
-            <div class="text-xs font-bold text-white">StoreStock Companion Extension</div>
-            <div class="text-[11px] text-slate-400">100% direct scraping from your laptop • Zero server traffic</div>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 mt-3">
-          <a href="/download/extension/firefox" class="flex-1 text-center py-2 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition cursor-pointer shadow-md shadow-emerald-500/20">Firefox (.xpi)</a>
-          <a href="/download/extension/chrome" class="flex-1 text-center py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition border border-slate-700 cursor-pointer">Chrome/Edge/Brave (.zip)</a>
-        </div>
-      </div>
+      <p class="text-xs text-slate-500 max-w-sm mx-auto">Try a different search term, or use the store links above to search each store directly.</p>
     </div>
 
   </main>
@@ -704,167 +683,6 @@
     </div>
   </div>
 
-  <!-- StoreStock Companion Extension Modal -->
-  <div id="extensionModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-xl w-full p-6 sm:p-7 space-y-4 shadow-2xl relative">
-      
-      <!-- Close button -->
-      <button type="button" id="closeExtensionModalBtn" class="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg transition cursor-pointer" title="Close">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
-
-      <!-- Modal Header -->
-      <div class="flex items-center space-x-3">
-        <div class="h-11 w-11 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20 shrink-0">
-          <i data-lucide="puzzle" class="w-6 h-6 text-slate-950 font-bold"></i>
-        </div>
-        <div>
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <span>StoreStock Companion</span>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">100% Client-Side</span>
-          </h3>
-          <p class="text-xs text-slate-400 mt-0.5">
-            Enables your laptop browser to parse live stock &amp; prices directly from eMAG, Altex, PC Garage, Auchan, Flanco, evoMAG, and Amazon.
-          </p>
-        </div>
-      </div>
-
-      <!-- Live Status Banner -->
-      <div id="extModalStatusBanner" class="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center space-x-3 text-xs">
-        <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 animate-ping"></span>
-        <div class="flex-1">
-          <span class="font-bold text-amber-300">Extension Not Detected Yet</span>
-          <p class="text-[11px] text-slate-400 mt-0.5">Follow the quick 1-minute setup below for your browser to unlock direct laptop scraping.</p>
-        </div>
-      </div>
-
-      <!-- Browser Tabs -->
-      <div class="flex items-center space-x-1 border-b border-slate-800 pb-2 overflow-x-auto custom-scrollbar">
-        <button type="button" class="ext-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer bg-emerald-500 text-slate-950" data-browser="firefox">Firefox</button>
-        <button type="button" class="ext-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer bg-slate-800/80 text-slate-400 hover:text-white" data-browser="chrome">Chrome</button>
-        <button type="button" class="ext-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer bg-slate-800/80 text-slate-400 hover:text-white" data-browser="edge">Edge</button>
-        <button type="button" class="ext-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer bg-slate-800/80 text-slate-400 hover:text-white" data-browser="brave">Brave</button>
-        <button type="button" class="ext-tab-btn px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer bg-slate-800/80 text-slate-400 hover:text-white" data-browser="opera">Opera / GX</button>
-      </div>
-
-      <!-- Browser Guide Panels -->
-      <div id="extTabPanels" class="space-y-3">
-        
-        <!-- FIREFOX PANEL -->
-        <div class="ext-panel space-y-3" data-browser="firefox">
-          <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60">
-            <div>
-              <div class="text-xs font-bold text-white">StoreStock Companion for Firefox</div>
-              <div class="text-[11px] text-slate-400">Standard Firefox WebExtension (.xpi)</div>
-            </div>
-            <a href="/download/extension/firefox" class="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition cursor-pointer">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i>
-              <span>Download .xpi</span>
-            </a>
-          </div>
-          <ol class="text-xs text-slate-300 space-y-2 list-decimal list-inside pl-1 bg-slate-950/40 p-3 rounded-2xl border border-slate-800">
-            <li>Click <strong>Download .xpi</strong> above.</li>
-            <li>In Firefox, navigate to <code class="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400">about:debugging#/runtime/this-firefox</code>.</li>
-            <li>Click <strong>Load Temporary Add-on...</strong> and select the downloaded file.</li>
-            <li>Refresh StoreStock — the Companion badge turns green!</li>
-          </ol>
-        </div>
-
-        <!-- CHROME PANEL -->
-        <div class="ext-panel hidden space-y-3" data-browser="chrome">
-          <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60">
-            <div>
-              <div class="text-xs font-bold text-white">StoreStock Companion for Google Chrome</div>
-              <div class="text-[11px] text-slate-400">Manifest V3 Extension (.zip)</div>
-            </div>
-            <a href="/download/extension/chrome" class="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition cursor-pointer">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i>
-              <span>Download .zip</span>
-            </a>
-          </div>
-          <ol class="text-xs text-slate-300 space-y-2 list-decimal list-inside pl-1 bg-slate-950/40 p-3 rounded-2xl border border-slate-800">
-            <li>Click <strong>Download .zip</strong> above and extract it into a folder.</li>
-            <li>In Chrome, open <code class="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400">chrome://extensions</code>.</li>
-            <li>Enable <strong>Developer mode</strong> (toggle switch in the top-right corner).</li>
-            <li>Click <strong>Load unpacked</strong> and pick the extracted folder.</li>
-            <li>Done! All 7 stores will search directly from your laptop.</li>
-          </ol>
-        </div>
-
-        <!-- EDGE PANEL -->
-        <div class="ext-panel hidden space-y-3" data-browser="edge">
-          <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60">
-            <div>
-              <div class="text-xs font-bold text-white">StoreStock Companion for Microsoft Edge</div>
-              <div class="text-[11px] text-slate-400">Chromium Extension (.zip)</div>
-            </div>
-            <a href="/download/extension/chrome" class="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition cursor-pointer">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i>
-              <span>Download .zip</span>
-            </a>
-          </div>
-          <ol class="text-xs text-slate-300 space-y-2 list-decimal list-inside pl-1 bg-slate-950/40 p-3 rounded-2xl border border-slate-800">
-            <li>Download and unzip the archive.</li>
-            <li>Go to <code class="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400">edge://extensions</code>.</li>
-            <li>Enable <strong>Developer mode</strong> (left sidebar).</li>
-            <li>Click <strong>Load unpacked</strong> and select the folder.</li>
-          </ol>
-        </div>
-
-        <!-- BRAVE PANEL -->
-        <div class="ext-panel hidden space-y-3" data-browser="brave">
-          <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60">
-            <div>
-              <div class="text-xs font-bold text-white">StoreStock Companion for Brave</div>
-              <div class="text-[11px] text-slate-400">Chromium Extension (.zip)</div>
-            </div>
-            <a href="/download/extension/chrome" class="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition cursor-pointer">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i>
-              <span>Download .zip</span>
-            </a>
-          </div>
-          <ol class="text-xs text-slate-300 space-y-2 list-decimal list-inside pl-1 bg-slate-950/40 p-3 rounded-2xl border border-slate-800">
-            <li>Download and unzip the archive.</li>
-            <li>Go to <code class="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400">brave://extensions</code>.</li>
-            <li>Enable <strong>Developer mode</strong> in the top-right.</li>
-            <li>Click <strong>Load unpacked</strong> and select the folder.</li>
-          </ol>
-        </div>
-
-        <!-- OPERA / OPERA GX PANEL -->
-        <div class="ext-panel hidden space-y-3" data-browser="opera">
-          <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-800/60 border border-slate-700/60">
-            <div>
-              <div class="text-xs font-bold text-white">StoreStock Companion for Opera &amp; Opera GX</div>
-              <div class="text-[11px] text-slate-400">Chromium Extension (.zip)</div>
-            </div>
-            <a href="/download/extension/chrome" class="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition cursor-pointer">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i>
-              <span>Download .zip</span>
-            </a>
-          </div>
-          <ol class="text-xs text-slate-300 space-y-2 list-decimal list-inside pl-1 bg-slate-950/40 p-3 rounded-2xl border border-slate-800">
-            <li>Download and extract the zip archive.</li>
-            <li>Navigate to <code class="bg-slate-800 px-1.5 py-0.5 rounded text-emerald-400">opera://extensions</code>.</li>
-            <li>Toggle <strong>Developer mode</strong> in the top-right corner.</li>
-            <li>Click <strong>Load unpacked</strong> and select the folder.</li>
-          </ol>
-        </div>
-
-      </div>
-
-      <!-- Security Guarantee Note -->
-      <div class="text-[11px] text-slate-400 pt-2 border-t border-slate-800/80 flex items-center justify-between">
-        <span class="flex items-center gap-1.5 text-slate-400">
-          <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i>
-          100% open-source, runs strictly on your machine, zero TrueNAS server scraping.
-        </span>
-        <button type="button" id="closeExtensionModalFooterBtn" class="text-xs px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer">Close</button>
-      </div>
-
-    </div>
-  </div>
-
   <!-- On-Screen JS Error Diagnostics Banner -->
   <div id="jsErrorBanner" class="hidden fixed top-0 left-0 right-0 z-[9999] bg-rose-600 text-white p-3 text-xs font-mono font-bold shadow-2xl flex items-center justify-between"></div>
 
@@ -941,7 +759,7 @@
       }
     });
   </script>
-  <script src="/static/client_search.js?v=103.0"></script>
-  <script src="/static/app.js?v=103.0"></script>
+  <script src="/static/client_search.js?v=104.0"></script>
+  <script src="/static/app.js?v=104.0"></script>
 </body>
 </html>

@@ -17,7 +17,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY core/ ./core/
 COPY providers/ ./providers/
 COPY static/ ./static/
-COPY extension/ ./extension/
 COPY server.py .
 
 RUN mkdir -p data

@@ -1,364 +1,93 @@
 /**
- * StoreStock 100% Direct Client-Side Search Engine
- * Runs completely on the user's laptop/browser.
- * Direct fetch() from your browser to each store - ZERO proxies, ZERO server-side calls.
+ * StoreStock Direct Client-Side Search Engine
+ * Runs completely in the user's browser - ZERO proxies, ZERO server-side calls.
+ *
+ * Only stores whose search endpoints send CORS headers can be queried from a web page.
+ * As of 2026-10-30 that is evoMAG (via its Nosto search API, ACAO: *). eMAG, Altex,
+ * PC Garage, Flanco, Auchan and Amazon block cross-origin reads, so those are offered
+ * as "search on store" link-outs instead (see getSearchLinks).
  */
-console.log("%c[StoreStock v101] 100% Direct Client-Side Search Active (ZERO Server Calls)", "background: #059669; color: #fff; font-weight: bold; font-size: 13px; padding: 4px 8px; border-radius: 4px;");
+console.log("%c[StoreStock v104] Direct Client-Side Search Active (ZERO Server Calls)", "background: #059669; color: #fff; font-weight: bold; font-size: 13px; padding: 4px 8px; border-radius: 4px;");
 
 window.StoreStockClientSearch = (function () {
-  async function fetchWithFallback(targetUrl, timeoutMs = 6000) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      const res = await fetch(targetUrl, {
-        signal: controller.signal,
-        headers: {
-          'Accept': 'text/html,application/xhtml+xml,application/xml,application/json;q=0.9,*/*;q=0.8'
-        }
-      });
-      clearTimeout(timer);
-      if (res.ok) {
-        const text = await res.text();
-        if (text && text.length > 50) return text;
-      }
-    } catch (e) {
-      clearTimeout(timer);
+  const NOSTO_URL = "https://search.nosto.com/v1/graphql";
+  const NOSTO_QUERY = `query($accountId:String,$query:String,$products:InputSearchProducts){
+    search(accountId:$accountId,query:$query,products:$products){
+      products{ total hits{ productId name url imageUrl price listPrice priceCurrencyCode brand availability } }
     }
-    return null;
+  }`;
+
+  function isGroceryQuery(query) {
+    const qLower = query.toLowerCase();
+    return ["lapte", "milk", "unt", "paine", "bread", "cafea", "coffee", "zahar", "faina", "oua", "cascaval"].some(k => qLower.includes(k));
   }
 
-  // Scraper 1: eMAG Romania
-  async function searchEmag(query) {
+  // Scraper: evoMAG Romania (Nosto search API, CORS-enabled)
+  async function searchEvoMag(query) {
     const t0 = performance.now();
-    const url = `https://www.emag.ro/search/${encodeURIComponent(query)}`;
-    const html = await fetchWithFallback(url, 4500);
-    const elapsed = Math.round(performance.now() - t0);
-    if (!html) return { store_name: "eMAG", elapsed_ms: elapsed, items: [] };
-
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const cards = doc.querySelectorAll(".card-item, .card-v2");
-    const items = [];
-
-    cards.forEach((card, idx) => {
-      if (idx >= 24) return;
-      const titleEl = card.querySelector(".card-v2-title, h2 a, a.card-v2-title");
-      if (!titleEl) return;
-      const title = titleEl.textContent.trim();
-
-      const priceEl = card.querySelector(".product-new-price, .pricing-box .product-new-price");
-      if (!priceEl) return;
-      const rawPrice = priceEl.textContent.replace(/[^\d,\.]/g, "").replace(/\./g, "").replace(",", ".");
-      const price = parseFloat(rawPrice) || 0.0;
-
-      const linkEl = card.querySelector("a[href]");
-      let pUrl = linkEl ? linkEl.getAttribute("href") : url;
-      if (pUrl && pUrl.startsWith("/")) pUrl = "https://www.emag.ro" + pUrl;
-
-      const imgEl = card.querySelector("img");
-      let imgUrl = imgEl ? (imgEl.getAttribute("src") || imgEl.getAttribute("data-src")) : null;
-
-      items.push({
-        id: `client_emag_${idx}_${Math.abs(hashString(pUrl)) % 100000}`,
-        store_name: "eMAG",
-        store_icon: "shopping-cart",
-        country_code: "RO",
-        title: title,
-        price: price,
-        currency: "RON",
-        in_stock: true,
-        stock_level: "IN_STOCK",
-        stock_badge_text: "In Stock",
-        product_url: pUrl,
-        image_url: imgUrl,
-        delivery_info: "Standard Delivery",
-        category: "general"
-      });
-    });
-
-    return { store_name: "eMAG", elapsed_ms: elapsed, items };
-  }
-
-  // Scraper 2: Altex Romania
-  async function searchAltex(query) {
-    const t0 = performance.now();
-    const url = `https://fenrir.altex.ro/v2/catalog/search/${encodeURIComponent(query)}`;
-    const raw = await fetchWithFallback(url, 4500);
-    const elapsed = Math.round(performance.now() - t0);
-    if (!raw) return { store_name: "Altex", elapsed_ms: elapsed, items: [] };
-
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
     const items = [];
     try {
-      const data = JSON.parse(raw);
-      const prods = data.products || data.data?.products || [];
-      prods.slice(0, 24).forEach((p, idx) => {
-        items.push({
-          id: `client_altex_${p.id || idx}`,
-          store_name: "Altex",
-          store_icon: "monitor",
-          country_code: "RO",
-          title: p.name || p.title,
-          price: parseFloat(p.price || p.special_price || 0.0),
-          currency: "RON",
-          in_stock: p.stock_status !== "out_of_stock",
-          stock_level: p.stock_status === "in_stock" ? "IN_STOCK" : "ONLINE_STOCK",
-          stock_badge_text: "In Stock (Altex)",
-          product_url: p.url ? (p.url.startsWith("http") ? p.url : `https://altex.ro/${p.url}`) : `https://altex.ro/cauta/?q=${encodeURIComponent(query)}`,
-          image_url: p.image || p.small_image || null,
-          category: "tech_hardware"
-        });
+      const res = await fetch(NOSTO_URL, {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: NOSTO_QUERY,
+          variables: { accountId: "evomag-prod", query, products: { size: 24, from: 0 } }
+        })
       });
-    } catch (e) {}
-
-    return { store_name: "Altex", elapsed_ms: elapsed, items };
-  }
-
-  // Scraper 3: PC Garage Romania
-  async function searchPCGarage(query) {
-    const t0 = performance.now();
-    const url = `https://www.pcgarage.ro/cauta/${encodeURIComponent(query)}`;
-    const html = await fetchWithFallback(url, 4500);
-    const elapsed = Math.round(performance.now() - t0);
-    if (!html) return { store_name: "PC Garage", elapsed_ms: elapsed, items: [] };
-
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const cards = doc.querySelectorAll(".product_box_container");
-    const items = [];
-
-    cards.forEach((card, idx) => {
-      if (idx >= 24) return;
-      const titleEl = card.querySelector(".product_box_name a") || card.querySelector(".product_box_name");
-      if (!titleEl) return;
-      const title = titleEl.textContent.trim();
-      const pUrl = titleEl.getAttribute("href") || url;
-
-      const priceEl = card.querySelector(".price_num") || card.querySelector(".price");
-      if (!priceEl) return;
-      const rawPrice = priceEl.textContent.replace(/[^\d,\.]/g, "").replace(/\./g, "").replace(",", ".");
-      const price = parseFloat(rawPrice) || 0.0;
-
-      const imgEl = card.querySelector("img");
-      const imgUrl = imgEl ? (imgEl.getAttribute("src") || imgEl.getAttribute("data-src")) : null;
-
-      items.push({
-        id: `client_pcg_${idx}_${Math.abs(hashString(pUrl)) % 100000}`,
-        store_name: "PC Garage",
-        store_icon: "cpu",
-        country_code: "RO",
-        title: title,
-        price: price,
-        currency: "RON",
-        in_stock: true,
-        stock_level: "IN_STOCK",
-        stock_badge_text: "In Stock (PC Garage)",
-        product_url: pUrl,
-        image_url: imgUrl,
-        category: "tech_hardware"
-      });
-    });
-
-    return { store_name: "PC Garage", elapsed_ms: elapsed, items };
-  }
-
-  // Scraper 4: Auchan Romania (Groceries, Dairy, Market)
-  async function searchAuchan(query) {
-    const t0 = performance.now();
-    const url = `https://www.auchan.ro/api/catalog_system/pub/products/search?ft=${encodeURIComponent(query)}`;
-    const raw = await fetchWithFallback(url, 4500);
-    const elapsed = Math.round(performance.now() - t0);
-    if (!raw) return { store_name: "Auchan Hypermarket", elapsed_ms: elapsed, items: [] };
-
-    const items = [];
-    try {
-      const data = JSON.parse(raw);
-      if (Array.isArray(data)) {
-        data.slice(0, 24).forEach((p, idx) => {
-          const itemArr = p.items || [];
-          const bestItem = itemArr[0] || {};
-          const sellers = bestItem.sellers || [];
-          const bestSeller = sellers[0] || {};
-          const commOffer = bestSeller.commertialOffer || {};
-
-          const price = parseFloat(commOffer.Price || commOffer.ListPrice || 0.0);
-          const available = (commOffer.AvailableQuantity || 0) > 0;
-          const pUrl = p.link || `https://www.auchan.ro/${p.linkText}/p`;
-          const imgUrl = bestItem.images && bestItem.images[0] ? bestItem.images[0].imageUrl : null;
-
+      if (res.ok) {
+        const data = await res.json();
+        const hits = data?.data?.search?.products?.hits || [];
+        hits.forEach((p, idx) => {
+          const inStock = p.availability === "InStock";
           items.push({
-            id: `client_auchan_${p.productId || idx}`,
-            store_name: "Auchan Hypermarket",
-            store_icon: "shopping-cart",
+            id: `client_evomag_${p.productId || idx}`,
+            store_name: "evoMAG",
+            store_icon: "cpu",
             country_code: "RO",
-            title: p.productName || p.productTitle || query,
-            price: price,
-            currency: "RON",
-            in_stock: available,
-            stock_level: available ? "IN_STOCK" : "OUT_OF_STOCK",
-            stock_badge_text: available ? "In Stock (Shelf)" : "Out of Stock",
-            product_url: pUrl,
-            image_url: imgUrl,
-            category: "groceries"
+            title: p.name,
+            price: parseFloat(p.price) || 0.0,
+            currency: p.priceCurrencyCode || "RON",
+            in_stock: inStock,
+            stock_level: inStock ? "IN_STOCK" : "OUT_OF_STOCK",
+            stock_badge_text: inStock ? "In Stock" : "Out of Stock",
+            product_url: p.url,
+            image_url: p.imageUrl || null,
+            delivery_info: "Standard Delivery",
+            category: "tech_hardware"
           });
         });
       }
-    } catch (e) {}
-
-    return { store_name: "Auchan Hypermarket", elapsed_ms: elapsed, items };
-  }
-
-  // Scraper 5: Flanco Romania
-  async function searchFlanco(query) {
-    const t0 = performance.now();
-    const url = `https://www.flanco.ro/catalogsearch/result/?q=${encodeURIComponent(query)}`;
-    const html = await fetchWithFallback(url, 4500);
-    const elapsed = Math.round(performance.now() - t0);
-    if (!html) return { store_name: "Flanco", elapsed_ms: elapsed, items: [] };
-
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const cards = doc.querySelectorAll(".product-item");
-    const items = [];
-
-    cards.forEach((card, idx) => {
-      if (idx >= 20) return;
-      const titleEl = card.querySelector(".product-item-link");
-      if (!titleEl) return;
-      const title = titleEl.textContent.trim();
-      const pUrl = titleEl.getAttribute("href") || url;
-
-      const priceEl = card.querySelector(".price");
-      if (!priceEl) return;
-      const rawPrice = priceEl.textContent.replace(/[^\d,\.]/g, "").replace(/\./g, "").replace(",", ".");
-      const price = parseFloat(rawPrice) || 0.0;
-
-      const imgEl = card.querySelector(".product-image-photo");
-      const imgUrl = imgEl ? (imgEl.getAttribute("src") || imgEl.getAttribute("data-src")) : null;
-
-      items.push({
-        id: `client_flanco_${idx}_${Math.abs(hashString(pUrl)) % 100000}`,
-        store_name: "Flanco",
-        store_icon: "shopping-bag",
-        country_code: "RO",
-        title: title,
-        price: price,
-        currency: "RON",
-        in_stock: true,
-        stock_level: "IN_STOCK",
-        stock_badge_text: "In Stock",
-        product_url: pUrl,
-        image_url: imgUrl,
-        category: "tech_hardware"
-      });
-    });
-
-    return { store_name: "Flanco", elapsed_ms: elapsed, items };
-  }
-
-  // Scraper 6: evoMAG Romania
-  async function searchEvoMag(query) {
-    const t0 = performance.now();
-    const url = `https://www.evomag.ro/?sn.q=${encodeURIComponent(query)}`;
-    const html = await fetchWithFallback(url, 4500);
-    const elapsed = Math.round(performance.now() - t0);
-    if (!html) return { store_name: "evoMAG", elapsed_ms: elapsed, items: [] };
-
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const cards = doc.querySelectorAll(".sn-product, .product_box, .npi_content");
-    const items = [];
-
-    cards.forEach((card, idx) => {
-      if (idx >= 20) return;
-      const titleEl = card.querySelector(".npi_name, .product_name, a[title]");
-      if (!titleEl) return;
-      const title = titleEl.getAttribute("title") || titleEl.textContent.trim();
-      let pUrl = titleEl.getAttribute("href") || url;
-      if (pUrl && pUrl.startsWith("/")) pUrl = "https://www.evomag.ro" + pUrl;
-
-      const priceEl = card.querySelector(".real_price, .money_val, .price");
-      if (!priceEl) return;
-      const rawPrice = priceEl.textContent.replace(/[^\d,\.]/g, "").replace(/\./g, "").replace(",", ".");
-      const price = parseFloat(rawPrice) || 0.0;
-
-      const imgEl = card.querySelector("img");
-      const imgUrl = imgEl ? (imgEl.getAttribute("src") || imgEl.getAttribute("data-src")) : null;
-
-      items.push({
-        id: `client_evomag_${idx}_${Math.abs(hashString(pUrl)) % 100000}`,
-        store_name: "evoMAG",
-        store_icon: "cpu",
-        country_code: "RO",
-        title: title,
-        price: price,
-        currency: "RON",
-        in_stock: true,
-        stock_level: "IN_STOCK",
-        stock_badge_text: "In Stock",
-        product_url: pUrl,
-        image_url: imgUrl,
-        category: "tech_hardware"
-      });
-    });
-
-    return { store_name: "evoMAG", elapsed_ms: elapsed, items };
-  }
-
-  // Scraper 7: Amazon Global
-  async function searchAmazon(query, country = "US") {
-    const t0 = performance.now();
-    const domain = country === "RO" || country === "DE" ? "amazon.de" : "amazon.com";
-    const currency = country === "RO" || country === "DE" ? "EUR" : "USD";
-    const url = `https://www.${domain}/s?k=${encodeURIComponent(query)}`;
-    const html = await fetchWithFallback(url, 4500);
-    const elapsed = Math.round(performance.now() - t0);
-    if (!html) return { store_name: "Amazon", elapsed_ms: elapsed, items: [] };
-
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    const cards = doc.querySelectorAll("div[data-component-type=s-search-result]");
-    const items = [];
-
-    cards.forEach((card, idx) => {
-      if (idx >= 15) return;
-      const titleEl = card.querySelector("h2 span, h2 a");
-      if (!titleEl) return;
-      const title = titleEl.textContent.trim();
-
-      const priceEl = card.querySelector(".a-price .a-offscreen, .a-price");
-      let price = 0.0;
-      if (priceEl) {
-        const raw = priceEl.textContent.replace(/[^\d,\.]/g, "").replace(/,/g, ".");
-        price = parseFloat(raw) || 0.0;
-      }
-
-      const linkEl = card.querySelector("h2 a[href]");
-      let pUrl = linkEl ? `https://www.${domain}${linkEl.getAttribute("href")}` : url;
-      const imgEl = card.querySelector("img.s-image, img");
-      const imgUrl = imgEl ? imgEl.getAttribute("src") : null;
-
-      items.push({
-        id: `client_amz_${idx}_${Math.abs(hashString(pUrl)) % 100000}`,
-        store_name: "Amazon",
-        store_icon: "package",
-        country_code: country,
-        title: title,
-        price: price,
-        currency: currency,
-        in_stock: true,
-        stock_level: "IN_STOCK",
-        stock_badge_text: "In Stock (Amazon)",
-        product_url: pUrl,
-        image_url: imgUrl,
-        category: "general"
-      });
-    });
-
-    return { store_name: "Amazon", elapsed_ms: elapsed, items };
-  }
-
-  function hashString(str) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = ((hash << 5) - hash) + str.charCodeAt(i);
-      hash |= 0;
+    } catch (e) {
+      console.warn("[ClientSearch] evoMAG search failed:", e);
+    } finally {
+      clearTimeout(timer);
     }
-    return hash;
+    return { store_name: "evoMAG", elapsed_ms: Math.round(performance.now() - t0), items };
+  }
+
+  // Stores that block cross-origin reads: link out to their own search results page
+  function getSearchLinks(query, country) {
+    const q = encodeURIComponent(query);
+    if (country === "RO") {
+      const links = [
+        { store_name: "eMAG", url: `https://www.emag.ro/search/${q}` },
+        { store_name: "Altex", url: `https://altex.ro/cauta/?q=${q}` },
+        { store_name: "PC Garage", url: `https://www.pcgarage.ro/cauta/${q}` },
+        { store_name: "Flanco", url: `https://www.flanco.ro/catalogsearch/result/?q=${q}` },
+        { store_name: "Auchan", url: `https://www.auchan.ro/${q}?_q=${q}&map=ft` },
+        { store_name: "Amazon.de", url: `https://www.amazon.de/s?k=${q}` }
+      ];
+      if (isGroceryQuery(query)) {
+        return links.filter(l => ["Auchan", "eMAG", "Amazon.de"].includes(l.store_name));
+      }
+      return links;
+    }
+    const amazonDomain = country === "DE" ? "amazon.de" : "amazon.com";
+    return [{ store_name: amazonDomain.replace("amazon", "Amazon"), url: `https://www.${amazonDomain}/s?k=${q}` }];
   }
 
   // Background Sync: Persists discovered products to TrueNAS SQLite DB with user branch coords
@@ -387,26 +116,9 @@ window.StoreStockClientSearch = (function () {
 
   // Master Client Search Method
   async function searchAllClientSide(query, country, onStoreResult, userCoords = null) {
-    const qLower = query.toLowerCase();
-    const isGrocery = ["lapte", "milk", "unt", "paine", "bread", "cafea", "coffee", "zahar", "faina", "oua", "cascaval"].some(k => qLower.includes(k));
-
     let scrapers = [];
-    if (country === "RO") {
-      if (isGrocery) {
-        scrapers = [searchAuchan(query), searchEmag(query), searchAmazon(query, "RO")];
-      } else {
-        scrapers = [
-          searchEmag(query),
-          searchAltex(query),
-          searchPCGarage(query),
-          searchFlanco(query),
-          searchEvoMag(query),
-          searchAuchan(query),
-          searchAmazon(query, "RO")
-        ];
-      }
-    } else {
-      scrapers = [searchAmazon(query, country), searchAltex(query)];
+    if (country === "RO" && !isGroceryQuery(query)) {
+      scrapers = [searchEvoMag(query)];
     }
 
     // Stream each store as it finishes in real-time
@@ -425,6 +137,7 @@ window.StoreStockClientSearch = (function () {
   }
 
   return {
-    searchAll: searchAllClientSide
+    searchAll: searchAllClientSide,
+    getSearchLinks
   };
 })();
