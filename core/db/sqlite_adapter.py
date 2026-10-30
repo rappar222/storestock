@@ -79,6 +79,20 @@ class SQLiteDatabaseAdapter(BaseDatabaseAdapter):
                     last_checked TEXT
                 );
             """)
+            # 3. Price History Table (sparklines, trend tracking)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS price_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_url TEXT NOT NULL,
+                    price REAL NOT NULL,
+                    currency TEXT NOT NULL,
+                    recorded_at INTEGER NOT NULL
+                );
+            """)
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_price_history_url
+                ON price_history(product_url, recorded_at DESC);
+            """)
             conn.commit()
 
     def get_cached_products(self, query: str, country_code: str = "RO") -> List[StoreResult]:
@@ -131,7 +145,8 @@ class SQLiteDatabaseAdapter(BaseDatabaseAdapter):
                             delivery_info=row["delivery_info"] or "Instant Verified Cache",
                             category=ProductCategory(row["category"]) if row["category"] in [e.value for e in ProductCategory] else ProductCategory.GENERAL,
                             store_branch=row["store_branch"],
-                            distance_km=float(row["distance_km"]) if row["distance_km"] is not None else None
+                            distance_km=float(row["distance_km"]) if row["distance_km"] is not None else None,
+                            last_updated=int(row["last_updated"]) if row["last_updated"] is not None else None
                         )
                     )
         except Exception as e:
@@ -191,6 +206,21 @@ class SQLiteDatabaseAdapter(BaseDatabaseAdapter):
                     """,
                     records
                 )
+
+                # Record price snapshots in price_history if price > 0
+                history_records = [
+                    (it.product_url, float(it.price or 0.0), it.currency or "RON", now_ts)
+                    for it in items if float(it.price or 0.0) > 0
+                ]
+                if history_records:
+                    conn.executemany(
+                        """
+                        INSERT INTO price_history (product_url, price, currency, recorded_at)
+                        VALUES (?, ?, ?, ?)
+                        """,
+                        history_records
+                    )
+
                 conn.commit()
         except Exception as e:
             print(f"[SQLiteDatabaseAdapter] Error saving products: {e}")
@@ -261,6 +291,33 @@ class SQLiteDatabaseAdapter(BaseDatabaseAdapter):
                 cursor = conn.execute("DELETE FROM restock_alerts WHERE id = ?;", (alert_id,))
                 conn.commit()
                 return cursor.rowcount > 0
+        except Exception as e:
+            print(f"[SQLiteDatabaseAdapter] Error deleting alert: {e}")
+            return False
+
+    def get_price_history(self, product_url: str, limit: int = 15) -> List[Dict[str, Any]]:
+        history = []
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.execute(
+                    """
+                    SELECT price, currency, recorded_at
+                    FROM price_history
+                    WHERE product_url = ?
+                    ORDER BY recorded_at DESC
+                    LIMIT ?
+                    """,
+                    (product_url, limit)
+                )
+                for r in cursor.fetchall():
+                    history.append({
+                        "price": float(r["price"]),
+                        "currency": r["currency"],
+                        "recorded_at": int(r["recorded_at"])
+                    })
+        except Exception as e:
+            print(f"[SQLiteDatabaseAdapter] Error fetching price history: {e}")
+        return history
         except Exception as e:
             print(f"[SQLiteDatabaseAdapter] Error deleting alert: {e}")
             return False

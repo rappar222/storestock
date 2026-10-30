@@ -1561,6 +1561,28 @@ function executeSearch(query) {
   };
   renderLatencyDisplay();
 
+  let sseCompleted = false;
+  let clientCompleted = !window.StoreStockClientSearch;
+
+  function checkAllSearchesComplete() {
+    if (sseCompleted && clientCompleted) {
+      if (thisBatchId !== currentSearchBatchId) return;
+      loadingIndicator.classList.add('hidden');
+      timingStats.streamDone = true;
+      if (timingStats.dataElapsed === null) {
+        timingStats.dataReadyTime = performance.now();
+        timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
+      }
+      renderLatencyDisplay();
+      updateStats();
+      if (currentResults.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+      }
+    }
+  }
+
   // Request TrueNAS instant database cache only (0 server outbound scrapes)
   let url = `/api/stream?q=${encodeURIComponent(query.trim())}&country=${country}&cached_only=true`;
   if (userCoords) {
@@ -1573,6 +1595,7 @@ function executeSearch(query) {
       if (thisBatchId !== currentSearchBatchId) return;
       renderStorePill(p.store_name, p.items.length, p.elapsed_ms, p.items || [], false);
       if (p.items && p.items.length > 0) {
+        emptyState.classList.add('hidden');
         const urlMap = new Map(currentResults.map((r, idx) => [r.product_url, idx]));
         p.items.forEach(newItem => {
           if (urlMap.has(newItem.product_url)) {
@@ -1593,20 +1616,9 @@ function executeSearch(query) {
         updateMapMarkers();
         updateStats();
       }
-    }).finally(() => {
-      if (thisBatchId === currentSearchBatchId) {
-        loadingIndicator.classList.add('hidden');
-        timingStats.streamDone = true;
-        if (timingStats.dataElapsed === null) {
-          timingStats.dataReadyTime = performance.now();
-          timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
-        }
-        renderLatencyDisplay();
-        updateStats();
-        if (currentResults.length === 0) {
-          emptyState.classList.remove('hidden');
-        }
-      }
+    }, userCoords).finally(() => {
+      clientCompleted = true;
+      checkAllSearchesComplete();
     });
   }
 
@@ -1623,6 +1635,7 @@ function executeSearch(query) {
         renderStorePill(p.store_name, p.items.length, p.elapsed_ms, p.items || [], p.is_instant_cache);
 
         if (p.items && p.items.length > 0) {
+          emptyState.classList.add('hidden');
           const urlMap = new Map(currentResults.map((r, idx) => [r.product_url, idx]));
           p.items.forEach(newItem => {
             if (urlMap.has(newItem.product_url)) {
@@ -1648,16 +1661,8 @@ function executeSearch(query) {
         }
       } else if (data.type === 'done') {
         eventSource.close();
-        loadingIndicator.classList.add('hidden');
-        timingStats.streamDone = true;
-        timingStats.dataReadyTime = performance.now();
-        timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
-        renderLatencyDisplay();
-        updateStats();
-
-        if (currentResults.length === 0) {
-          emptyState.classList.remove('hidden');
-        }
+        sseCompleted = true;
+        checkAllSearchesComplete();
       }
     } catch (e) {
       console.error("Error parsing SSE event:", e);
@@ -1666,17 +1671,8 @@ function executeSearch(query) {
 
   eventSource.onerror = (err) => {
     eventSource.close();
-    loadingIndicator.classList.add('hidden');
-    timingStats.streamDone = true;
-    if (timingStats.dataElapsed === null) {
-      timingStats.dataReadyTime = performance.now();
-      timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
-    }
-    renderLatencyDisplay();
-    updateStats();
-    if (currentResults.length === 0) {
-      emptyState.classList.remove('hidden');
-    }
+    sseCompleted = true;
+    checkAllSearchesComplete();
   };
 }
 
@@ -1841,11 +1837,31 @@ function renderResults() {
     filtered = filtered.filter(r => r.store_name === activeBrand);
   }
 
+  // Currency exchange rates for normalized price sorting
+  const FX_RATES_TO_RON = {
+    "RON": 1.0,
+    "EUR": 4.97,
+    "USD": 4.60,
+    "GBP": 5.85,
+    "AUD": 3.02,
+    "CAD": 3.32,
+    "JPY": 0.030,
+    "PLN": 1.15,
+    "HUF": 0.0125,
+    "CZK": 0.20
+  };
+
+  function toNormalizedPrice(item) {
+    if (!item.price || item.price <= 0) return 999999999;
+    const rate = FX_RATES_TO_RON[item.currency ? item.currency.toUpperCase() : "RON"] || 1.0;
+    return item.price * rate;
+  }
+
   // Sort
   if (activeSort === 'price_asc') {
-    filtered.sort((a, b) => (a.price > 0 ? a.price : 9999999) - (b.price > 0 ? b.price : 9999999));
+    filtered.sort((a, b) => toNormalizedPrice(a) - toNormalizedPrice(b));
   } else if (activeSort === 'price_desc') {
-    filtered.sort((a, b) => b.price - a.price);
+    filtered.sort((a, b) => toNormalizedPrice(b) - toNormalizedPrice(a));
   } else if (activeSort === 'distance_asc') {
     filtered.sort((a, b) => (a.distance_km || 9999) - (b.distance_km || 9999));
   } else {
@@ -1973,12 +1989,30 @@ function renderResults() {
       `;
     }
 
+    // Time since last verified cache
+    let timeAgoBadge = '';
+    if (item.last_updated) {
+      const secDiff = Math.max(0, Math.floor(Date.now() / 1000) - item.last_updated);
+      let timeText = 'Just now';
+      if (secDiff > 86400) {
+        timeText = `${Math.floor(secDiff / 86400)}d ago`;
+      } else if (secDiff > 3600) {
+        timeText = `${Math.floor(secDiff / 3600)}h ago`;
+      } else if (secDiff > 60) {
+        timeText = `${Math.floor(secDiff / 60)}m ago`;
+      }
+      timeAgoBadge = `<span class="text-[10px] text-slate-500 font-mono" title="Last checked ${new Date(item.last_updated * 1000).toLocaleString()}">• ${timeText}</span>`;
+    }
+
     card.innerHTML = `
       <div class="space-y-2.5">
         <div class="flex items-center justify-between gap-2">
-          <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700/80 truncate max-w-[130px]" title="${item.store_name}">
-            ${item.store_name}
-          </span>
+          <div class="flex items-center space-x-1 truncate max-w-[150px]">
+            <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700/80 truncate" title="${item.store_name}">
+              ${item.store_name}
+            </span>
+            ${timeAgoBadge}
+          </div>
           <span class="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wide whitespace-nowrap shrink-0 ${badgeClass}" title="${item.stock_badge_text || cleanStockText}">
             <i data-lucide="${statusIcon}" class="w-3.5 h-3.5 shrink-0"></i>
             <span>${cleanStockText}</span>

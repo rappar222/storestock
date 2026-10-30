@@ -51,6 +51,10 @@ class BaseDatabaseAdapter(abc.ABC):
         """Delete an alert by ID."""
         pass
 
+    def get_price_history(self, product_url: str, limit: int = 15) -> List[Dict[str, Any]]:
+        """Retrieve historical price snapshots for a product."""
+        return []
+
     def close(self) -> None:
         """Safely close open connections or connection pools."""
         pass

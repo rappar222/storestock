@@ -1,30 +1,61 @@
 /**
  * StoreStock Client-Side Scraper & Distributed Cache Agent
  * Runs 100% on the user's client device/browser.
- * The TrueNAS server never makes outbound scraper calls.
+ * The TrueNAS server never makes outbound scraper calls to protect your server IP.
  */
 
 window.StoreStockClientSearch = (function () {
-  // Reliable public CORS bridges (excluding corsproxy.io which returns 401)
+  // Check if a URL has an open JSON API that supports direct browser fetch
+  function isDirectCorsAllowed(targetUrl) {
+    try {
+      const parsed = new URL(targetUrl);
+      // Fenrir Altex catalog API and VTEX Auchan public API allow direct CORS
+      if (parsed.hostname.includes("altex.ro") && parsed.pathname.includes("/v2/catalog/search")) {
+        return true;
+      }
+      if (parsed.hostname.includes("auchan.ro") && parsed.pathname.includes("/api/catalog_system/")) {
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
   async function fetchWithFallback(targetUrl, timeoutMs = 8000) {
-    // Strategy 1: Direct fetch (works if remote endpoint allows CORS)
+    // Strategy 1: Direct fetch ONLY for known CORS-friendly API endpoints (avoids red console errors on HTML pages)
+    if (isDirectCorsAllowed(targetUrl)) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 3500);
+        const res = await fetch(targetUrl, {
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' }
+        });
+        clearTimeout(timer);
+        if (res.ok) {
+          const text = await res.text();
+          if (text && text.length > 50) return text;
+        }
+      } catch (e) {
+        // Fall through to bridges if direct API fails
+      }
+    }
+
+    // Strategy 2: CodeTabs CORS Bridge (ultra-fast for HTML text)
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 2000);
-      const res = await fetch(targetUrl, {
-        signal: controller.signal,
-        headers: { 'Accept': 'application/json, text/html' }
-      });
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const codeTabsUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
+      const res = await fetch(codeTabsUrl, { signal: controller.signal });
       clearTimeout(timer);
       if (res.ok) {
         const text = await res.text();
         if (text && text.length > 200) return text;
       }
     } catch (e) {
-      // Direct CORS blocked, proceed to CORS bridges
+      // Continue to next bridge
     }
 
-    // Strategy 2: AllOrigins JSON API (avoids raw aborts by returning JSON wrapper)
+    // Strategy 3: AllOrigins JSON API wrapper
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -38,28 +69,13 @@ window.StoreStockClientSearch = (function () {
         }
       }
     } catch (e) {
-      // Continue to next bridge
-    }
-
-    // Strategy 3: CodeTabs CORS Bridge
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      const codeTabsUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
-      const res = await fetch(codeTabsUrl, { signal: controller.signal });
-      clearTimeout(timer);
-      if (res.ok) {
-        const text = await res.text();
-        if (text && text.length > 200) return text;
-      }
-    } catch (e) {
       // Fallback exhausted
     }
 
     return null;
   }
 
-  // Scraper 1: eMAG Romania (Client-Side)
+  // Scraper 1: eMAG Romania
   async function searchEmag(query) {
     const t0 = performance.now();
     const url = `https://www.emag.ro/search/${encodeURIComponent(query)}`;
@@ -99,7 +115,7 @@ window.StoreStockClientSearch = (function () {
         currency: "RON",
         in_stock: true,
         stock_level: "IN_STOCK",
-        stock_badge_text: "In Stock (Client Scraped)",
+        stock_badge_text: "In Stock",
         product_url: pUrl,
         image_url: imgUrl,
         delivery_info: "Standard Delivery",
@@ -110,7 +126,7 @@ window.StoreStockClientSearch = (function () {
     return { store_name: "eMAG", elapsed_ms: elapsed, items };
   }
 
-  // Scraper 2: Altex Romania (Client-Side)
+  // Scraper 2: Altex Romania
   async function searchAltex(query) {
     const t0 = performance.now();
     const url = `https://fenrir.altex.ro/v2/catalog/search/${encodeURIComponent(query)}`;
@@ -144,7 +160,7 @@ window.StoreStockClientSearch = (function () {
     return { store_name: "Altex", elapsed_ms: elapsed, items };
   }
 
-  // Scraper 3: PC Garage Romania (Client-Side)
+  // Scraper 3: PC Garage Romania
   async function searchPCGarage(query) {
     const t0 = performance.now();
     const url = `https://www.pcgarage.ro/cauta/${encodeURIComponent(query)}`;
@@ -191,7 +207,148 @@ window.StoreStockClientSearch = (function () {
     return { store_name: "PC Garage", elapsed_ms: elapsed, items };
   }
 
-  // Scraper 4: Amazon (Client-Side)
+  // Scraper 4: Auchan Romania (Groceries, Dairy, Market)
+  async function searchAuchan(query) {
+    const t0 = performance.now();
+    const url = `https://www.auchan.ro/api/catalog_system/pub/products/search?ft=${encodeURIComponent(query)}`;
+    const raw = await fetchWithFallback(url, 6000);
+    const elapsed = Math.round(performance.now() - t0);
+    if (!raw) return { store_name: "Auchan Hypermarket", elapsed_ms: elapsed, items: [] };
+
+    const items = [];
+    try {
+      const data = JSON.parse(raw);
+      if (Array.isArray(data)) {
+        data.slice(0, 24).forEach((p, idx) => {
+          const itemArr = p.items || [];
+          const bestItem = itemArr[0] || {};
+          const sellers = bestItem.sellers || [];
+          const bestSeller = sellers[0] || {};
+          const commOffer = bestSeller.commertialOffer || {};
+
+          const price = parseFloat(commOffer.Price || commOffer.ListPrice || 0.0);
+          const available = (commOffer.AvailableQuantity || 0) > 0;
+          const pUrl = p.link || `https://www.auchan.ro/${p.linkText}/p`;
+          const imgUrl = bestItem.images && bestItem.images[0] ? bestItem.images[0].imageUrl : null;
+
+          items.push({
+            id: `client_auchan_${p.productId || idx}`,
+            store_name: "Auchan Hypermarket",
+            store_icon: "shopping-cart",
+            country_code: "RO",
+            title: p.productName || p.productTitle || query,
+            price: price,
+            currency: "RON",
+            in_stock: available,
+            stock_level: available ? "IN_STOCK" : "OUT_OF_STOCK",
+            stock_badge_text: available ? "In Stock (Shelf)" : "Out of Stock",
+            product_url: pUrl,
+            image_url: imgUrl,
+            category: "groceries"
+          });
+        });
+      }
+    } catch (e) {}
+
+    return { store_name: "Auchan Hypermarket", elapsed_ms: elapsed, items };
+  }
+
+  // Scraper 5: Flanco Romania
+  async function searchFlanco(query) {
+    const t0 = performance.now();
+    const url = `https://www.flanco.ro/catalogsearch/result/?q=${encodeURIComponent(query)}`;
+    const html = await fetchWithFallback(url, 8000);
+    const elapsed = Math.round(performance.now() - t0);
+    if (!html) return { store_name: "Flanco", elapsed_ms: elapsed, items: [] };
+
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const cards = doc.querySelectorAll(".product-item");
+    const items = [];
+
+    cards.forEach((card, idx) => {
+      if (idx >= 20) return;
+      const titleEl = card.querySelector(".product-item-link");
+      if (!titleEl) return;
+      const title = titleEl.textContent.trim();
+      const pUrl = titleEl.getAttribute("href") || url;
+
+      const priceEl = card.querySelector(".price");
+      if (!priceEl) return;
+      const rawPrice = priceEl.textContent.replace(/[^\d,\.]/g, "").replace(/\./g, "").replace(",", ".");
+      const price = parseFloat(rawPrice) || 0.0;
+
+      const imgEl = card.querySelector(".product-image-photo");
+      const imgUrl = imgEl ? (imgEl.getAttribute("src") || imgEl.getAttribute("data-src")) : null;
+
+      items.push({
+        id: `client_flanco_${idx}_${Math.abs(hashString(pUrl)) % 100000}`,
+        store_name: "Flanco",
+        store_icon: "shopping-bag",
+        country_code: "RO",
+        title: title,
+        price: price,
+        currency: "RON",
+        in_stock: true,
+        stock_level: "IN_STOCK",
+        stock_badge_text: "In Stock",
+        product_url: pUrl,
+        image_url: imgUrl,
+        category: "tech_hardware"
+      });
+    });
+
+    return { store_name: "Flanco", elapsed_ms: elapsed, items };
+  }
+
+  // Scraper 6: evoMAG Romania
+  async function searchEvoMag(query) {
+    const t0 = performance.now();
+    const url = `https://www.evomag.ro/cauta/${encodeURIComponent(query)}`;
+    const html = await fetchWithFallback(url, 8000);
+    const elapsed = Math.round(performance.now() - t0);
+    if (!html) return { store_name: "evoMAG", elapsed_ms: elapsed, items: [] };
+
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const cards = doc.querySelectorAll(".sn-product, .product_box, .npi_content");
+    const items = [];
+
+    cards.forEach((card, idx) => {
+      if (idx >= 20) return;
+      const titleEl = card.querySelector(".npi_name, .product_name, a[title]");
+      if (!titleEl) return;
+      const title = titleEl.getAttribute("title") || titleEl.textContent.trim();
+      let pUrl = titleEl.getAttribute("href") || url;
+      if (pUrl && pUrl.startsWith("/")) pUrl = "https://www.evomag.ro" + pUrl;
+
+      const priceEl = card.querySelector(".real_price, .money_val, .price");
+      if (!priceEl) return;
+      const rawPrice = priceEl.textContent.replace(/[^\d,\.]/g, "").replace(/\./g, "").replace(",", ".");
+      const price = parseFloat(rawPrice) || 0.0;
+
+      const imgEl = card.querySelector("img");
+      const imgUrl = imgEl ? (imgEl.getAttribute("src") || imgEl.getAttribute("data-src")) : null;
+
+      items.push({
+        id: `client_evomag_${idx}_${Math.abs(hashString(pUrl)) % 100000}`,
+        store_name: "evoMAG",
+        store_icon: "cpu",
+        country_code: "RO",
+        title: title,
+        price: price,
+        currency: "RON",
+        in_stock: true,
+        stock_level: "IN_STOCK",
+        stock_badge_text: "In Stock",
+        product_url: pUrl,
+        image_url: imgUrl,
+        category: "tech_hardware"
+      });
+    });
+
+    return { store_name: "evoMAG", elapsed_ms: elapsed, items };
+  }
+
+  // Scraper 7: Amazon Global
   async function searchAmazon(query, country = "US") {
     const t0 = performance.now();
     const domain = country === "RO" || country === "DE" ? "amazon.de" : "amazon.com";
@@ -252,14 +409,22 @@ window.StoreStockClientSearch = (function () {
     return hash;
   }
 
-  // Background Sync: Persists discovered products to TrueNAS SQLite DB
-  function syncItemsToServer(query, country, items) {
+  // Background Sync: Persists discovered products to TrueNAS SQLite DB with user branch coords
+  function syncItemsToServer(query, country, items, userCoords = null) {
     if (!items || items.length === 0) return;
     try {
+      const payload = {
+        query,
+        country,
+        items,
+        lat: userCoords ? userCoords.lat : null,
+        lon: userCoords ? userCoords.lon : null
+      };
+
       fetch("/api/cache/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, country, items })
+        body: JSON.stringify(payload)
       }).then(r => r.json()).then(res => {
         if (res && res.saved) {
           console.log(`[ClientSearch] Synced ${res.saved} items to TrueNAS database.`);
@@ -269,24 +434,42 @@ window.StoreStockClientSearch = (function () {
   }
 
   // Master Client Search Method
-  async function searchAllClientSide(query, country, onStoreResult) {
-    const scrapers = country === "RO"
-      ? [searchEmag(query), searchAltex(query), searchPCGarage(query), searchAmazon(query, "RO")]
-      : [searchAmazon(query, country), searchAltex(query)];
+  async function searchAllClientSide(query, country, onStoreResult, userCoords = null) {
+    const qLower = query.toLowerCase();
+    const isGrocery = ["lapte", "milk", "unt", "paine", "bread", "cafea", "coffee", "zahar", "faina", "oua", "cascaval"].some(k => qLower.includes(k));
+
+    let scrapers = [];
+    if (country === "RO") {
+      if (isGrocery) {
+        scrapers = [searchAuchan(query), searchEmag(query), searchAmazon(query, "RO")];
+      } else {
+        scrapers = [
+          searchEmag(query),
+          searchAltex(query),
+          searchPCGarage(query),
+          searchFlanco(query),
+          searchEvoMag(query),
+          searchAuchan(query),
+          searchAmazon(query, "RO")
+        ];
+      }
+    } else {
+      scrapers = [searchAmazon(query, country), searchAltex(query)];
+    }
 
     // Stream each store as it finishes in real-time
-    for (const promise of scrapers) {
-      promise.then(res => {
+    const promises = scrapers.map(p =>
+      p.then(res => {
         if (res && res.items) {
           onStoreResult(res);
-          syncItemsToServer(query, country, res.items);
+          syncItemsToServer(query, country, res.items, userCoords);
         }
       }).catch(err => {
         console.warn("[ClientSearch] Scraper error:", err);
-      });
-    }
+      })
+    );
 
-    await Promise.allSettled(scrapers);
+    await Promise.allSettled(promises);
   }
 
   return {

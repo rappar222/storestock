@@ -44,6 +44,8 @@ class StoreResult(BaseModel):
     mileage_km: Optional[int] = None
     fuel_type: Optional[str] = None
     transmission: Optional[str] = None
+    last_updated: Optional[int] = None
+    price_history: Optional[List[dict]] = None
 
 class SearchResponse(BaseModel):
     query: str

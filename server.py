@@ -24,6 +24,10 @@ async def startup_event():
     loop = asyncio.get_running_loop()
     loop.set_default_executor(ThreadPoolExecutor(max_workers=32))
 
+    # Launch background restock alert watcher
+    from core.alert_watcher import background_alert_watcher
+    asyncio.create_task(background_alert_watcher(interval_seconds=600))
+
 # Enable CORS for external client/API testing
 app.add_middleware(
     CORSMiddleware,
@@ -145,29 +149,63 @@ async def sync_client_cache(payload: dict = Body(...)):
     """
     Client-Side Distributed Cache Seeder:
     Accepts products discovered directly on user client devices/browsers
-    and commits them to the TrueNAS persistent DB without TrueNAS making outbound scrapes.
+    and commits them to the TrueNAS persistent DB with branch enrichment.
     """
     query = payload.get("query", "").strip()
     country = payload.get("country", "RO").strip().upper()
+    lat = payload.get("lat")
+    lon = payload.get("lon")
     items_raw = payload.get("items", [])
     if not query or not items_raw:
         return {"status": "ignored", "saved": 0}
 
-    from core.schema import StoreResult, StockLevel, ProductCategory
+    # Security validation: limit max items per payload
+    items_raw = items_raw[:60]
+
+    from core.schema import StoreResult
     from core.db import get_database_adapter
+    from core.branches import attach_branch_info
 
     parsed = []
-    for it in items_raw:
+    enriched_items = []
+    for idx, it in enumerate(items_raw):
         try:
-            parsed.append(StoreResult(**it))
+            prod_url = it.get("product_url", "")
+            # Basic validation: ensure proper HTTP/HTTPS URL
+            if not prod_url.startswith("http://") and not prod_url.startswith("https://"):
+                continue
+
+            item = StoreResult(**it)
+            # Enrich with physical store branch & distance if missing
+            if not item.store_branch:
+                branch_info = attach_branch_info(item.store_name, idx, lat, lon)
+                if branch_info:
+                    item.store_branch = branch_info.get("store_branch")
+                    item.store_address = branch_info.get("store_address")
+                    item.latitude = branch_info.get("latitude")
+                    item.longitude = branch_info.get("longitude")
+                    item.distance_km = branch_info.get("distance_km")
+
+            parsed.append(item)
+            enriched_items.append(item.model_dump())
         except Exception:
             pass
 
     if parsed:
         adapter = get_database_adapter()
         adapter.save_cached_products(query, country, parsed)
-        return {"status": "success", "saved": len(parsed)}
+        return {"status": "success", "saved": len(parsed), "items": enriched_items}
     return {"status": "error", "saved": 0}
+
+@app.get("/api/price-history")
+async def get_price_history_endpoint(url: str = Query(..., description="Product URL")):
+    """Returns historical price data points for a product URL."""
+    try:
+        from core.db import get_database_adapter
+        adapter = get_database_adapter()
+        return {"url": url, "history": adapter.get_price_history(url)}
+    except Exception as e:
+        return {"url": url, "history": [], "error": str(e)}
 
 # --- Restock Alerts Endpoints ---
 
@@ -235,12 +273,12 @@ def send_feedback_email_task(feedback_record: dict, screenshot_b64: Optional[str
 
     location_str = f"{city}, {country}" if include_location and (city or country) else "Not shared by user"
 
-    target_email = "feedback@polychroms.dev"
-    smtp_host = os.environ.get("SMTP_HOST", "smtp.gmail.com").strip()
-    smtp_user = os.environ.get("SMTP_USER", "rappar2018@gmail.com").strip()
-    smtp_pass = os.environ.get("SMTP_PASSWORD", "pfklqccstismrxyy").replace(" ", "").strip()
+    target_email = os.environ.get("FEEDBACK_TARGET_EMAIL", "feedback@polychroms.dev").strip()
+    smtp_host = os.environ.get("SMTP_HOST", "").strip()
+    smtp_user = os.environ.get("SMTP_USER", "").strip()
+    smtp_pass = os.environ.get("SMTP_PASSWORD", "").replace(" ", "").strip()
     smtp_port = int(str(os.environ.get("SMTP_PORT", 587)).strip())
-    smtp_from = os.environ.get("SMTP_FROM", "rappar2018@gmail.com").strip()
+    smtp_from = os.environ.get("SMTP_FROM", smtp_user or "alerts@storestock.app").strip()
 
     has_screenshot = bool(screenshot_b64)
     screenshot_note = "Attached (see screenshot below)" if has_screenshot else "None attached"
