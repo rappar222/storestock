@@ -86,7 +86,7 @@ window.StoreStockClientSearch = (function () {
   async function searchEmag(query) {
     const t0 = performance.now();
     const url = `https://www.emag.ro/search/${encodeURIComponent(query)}`;
-    const html = await fetchWithFallback(url, 8000);
+    const html = await fetchWithFallback(url, 4500);
     const elapsed = Math.round(performance.now() - t0);
     if (!html) return { store_name: "eMAG", elapsed_ms: elapsed, items: [] };
 
@@ -137,7 +137,7 @@ window.StoreStockClientSearch = (function () {
   async function searchAltex(query) {
     const t0 = performance.now();
     const url = `https://fenrir.altex.ro/v2/catalog/search/${encodeURIComponent(query)}`;
-    const raw = await fetchWithFallback(url, 6000);
+    const raw = await fetchWithFallback(url, 4500);
     const elapsed = Math.round(performance.now() - t0);
     if (!raw) return { store_name: "Altex", elapsed_ms: elapsed, items: [] };
 
@@ -171,7 +171,7 @@ window.StoreStockClientSearch = (function () {
   async function searchPCGarage(query) {
     const t0 = performance.now();
     const url = `https://www.pcgarage.ro/cauta/${encodeURIComponent(query)}`;
-    const html = await fetchWithFallback(url, 8000);
+    const html = await fetchWithFallback(url, 4500);
     const elapsed = Math.round(performance.now() - t0);
     if (!html) return { store_name: "PC Garage", elapsed_ms: elapsed, items: [] };
 
@@ -218,7 +218,7 @@ window.StoreStockClientSearch = (function () {
   async function searchAuchan(query) {
     const t0 = performance.now();
     const url = `https://www.auchan.ro/api/catalog_system/pub/products/search?ft=${encodeURIComponent(query)}`;
-    const raw = await fetchWithFallback(url, 6000);
+    const raw = await fetchWithFallback(url, 4500);
     const elapsed = Math.round(performance.now() - t0);
     if (!raw) return { store_name: "Auchan Hypermarket", elapsed_ms: elapsed, items: [] };
 
@@ -264,7 +264,7 @@ window.StoreStockClientSearch = (function () {
   async function searchFlanco(query) {
     const t0 = performance.now();
     const url = `https://www.flanco.ro/catalogsearch/result/?q=${encodeURIComponent(query)}`;
-    const html = await fetchWithFallback(url, 8000);
+    const html = await fetchWithFallback(url, 4500);
     const elapsed = Math.round(performance.now() - t0);
     if (!html) return { store_name: "Flanco", elapsed_ms: elapsed, items: [] };
 
@@ -311,7 +311,7 @@ window.StoreStockClientSearch = (function () {
   async function searchEvoMag(query) {
     const t0 = performance.now();
     const url = `https://www.evomag.ro/cauta/${encodeURIComponent(query)}`;
-    const html = await fetchWithFallback(url, 8000);
+    const html = await fetchWithFallback(url, 4500);
     const elapsed = Math.round(performance.now() - t0);
     if (!html) return { store_name: "evoMAG", elapsed_ms: elapsed, items: [] };
 
@@ -361,7 +361,7 @@ window.StoreStockClientSearch = (function () {
     const domain = country === "RO" || country === "DE" ? "amazon.de" : "amazon.com";
     const currency = country === "RO" || country === "DE" ? "EUR" : "USD";
     const url = `https://www.${domain}/s?k=${encodeURIComponent(query)}`;
-    const html = await fetchWithFallback(url, 8000);
+    const html = await fetchWithFallback(url, 4500);
     const elapsed = Math.round(performance.now() - t0);
     if (!html) return { store_name: "Amazon", elapsed_ms: elapsed, items: [] };
 

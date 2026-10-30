@@ -1561,35 +1561,32 @@ function executeSearch(query) {
   };
   renderLatencyDisplay();
 
-  let sseCompleted = false;
-  let clientCompleted = !window.StoreStockClientSearch;
-
-  function checkAllSearchesComplete() {
-    if (sseCompleted && clientCompleted) {
-      if (thisBatchId !== currentSearchBatchId) return;
-      loadingIndicator.classList.add('hidden');
-      timingStats.streamDone = true;
-      if (timingStats.dataElapsed === null) {
-        timingStats.dataReadyTime = performance.now();
-        timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
-      }
-      renderLatencyDisplay();
-      updateStats();
-      if (currentResults.length === 0) {
-        emptyState.classList.remove('hidden');
-      } else {
-        emptyState.classList.add('hidden');
-      }
+  // 1. Client-Side AI Intent Instant Disambiguation (Runs 100% on laptop)
+  function analyzeClientAiIntent(qStr) {
+    const q = (qStr || "").toLowerCase();
+    if (q.includes("5090") || q.includes("5080") || q.includes("5070") || q.includes("4090") || q.includes("rtx") || q.includes("gpu") || q.includes("placa video")) {
+      return {
+        canonical_name: "Standalone Graphics Card (GPU)",
+        description: "Searching real-time inventory for GPUs. Prioritizing discrete graphics cards."
+      };
     }
+    if (q.includes("pampers") || q.includes("scutece") || q.includes("lapte") || q.includes("milk") || q.includes("paine") || q.includes("cafea")) {
+      return {
+        canonical_name: "Grocery & Daily Essentials",
+        description: `Searching real-time store inventory for '${qStr}'. Prioritizing in-stock shelf items.`
+      };
+    }
+    return {
+      canonical_name: qStr.charAt(0).toUpperCase() + qStr.slice(1),
+      description: `Searching real-time inventory for '${qStr}'. Prioritizing direct product matches.`
+    };
   }
 
-  // 1. Instant Cache from TrueNAS (0 server outbound scrapes - server never touches store WAN)
-  let url = `/api/stream?q=${encodeURIComponent(query.trim())}&country=${country}&cached_only=true`;
-  if (userCoords) {
-    url += `&lat=${userCoords.lat}&lon=${userCoords.lon}`;
-  }
+  const aiIntent = analyzeClientAiIntent(query.trim());
+  renderAiIntent(aiIntent);
 
-  // 2. 100% Client-Side Parallel Search executed directly on user's device / browser
+  // 2. 100% Client-Side Parallel Search executed directly on user's laptop / browser!
+  // ZERO server-side streaming or search calls. All requests come directly from the laptop.
   if (window.StoreStockClientSearch) {
     window.StoreStockClientSearch.searchAll(query.trim(), country, (p) => {
       if (thisBatchId !== currentSearchBatchId) return;
@@ -1617,63 +1614,25 @@ function executeSearch(query) {
         updateStats();
       }
     }, userCoords).finally(() => {
-      clientCompleted = true;
-      checkAllSearchesComplete();
-    });
-  }
-
-  const eventSource = new EventSource(url);
-
-  eventSource.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data);
-
-      if (data.type === 'ai_intent') {
-        renderAiIntent(data.payload);
-      } else if (data.type === 'provider_result') {
-        const p = data.payload;
-        renderStorePill(p.store_name, p.items.length, p.elapsed_ms, p.items || [], p.is_instant_cache);
-
-        if (p.items && p.items.length > 0) {
-          emptyState.classList.add('hidden');
-          const urlMap = new Map(currentResults.map((r, idx) => [r.product_url, idx]));
-          p.items.forEach(newItem => {
-            if (urlMap.has(newItem.product_url)) {
-              // Update in-place with latest price/stock from live revalidation
-              const idx = urlMap.get(newItem.product_url);
-              currentResults[idx] = newItem;
-            } else {
-              currentResults.push(newItem);
-              urlMap.set(newItem.product_url, currentResults.length - 1);
-            }
-          });
-
-          // If this was instant cache, measure dataReadyTime immediately so user sees < 5ms!
-          if (p.is_instant_cache && timingStats.dataElapsed === null) {
-            timingStats.dataReadyTime = performance.now();
-            timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
-            renderLatencyDisplay();
-          }
-
-          renderResults();
-          renderBrandChips();
-          updateMapMarkers();
-        }
-      } else if (data.type === 'done') {
-        eventSource.close();
-        sseCompleted = true;
-        checkAllSearchesComplete();
+      if (thisBatchId !== currentSearchBatchId) return;
+      loadingIndicator.classList.add('hidden');
+      timingStats.streamDone = true;
+      if (timingStats.dataElapsed === null) {
+        timingStats.dataReadyTime = performance.now();
+        timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
       }
-    } catch (e) {
-      console.error("Error parsing SSE event:", e);
-    }
-  };
-
-  eventSource.onerror = (err) => {
-    eventSource.close();
-    sseCompleted = true;
-    checkAllSearchesComplete();
-  };
+      renderLatencyDisplay();
+      updateStats();
+      if (currentResults.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+      }
+    });
+  } else {
+    loadingIndicator.classList.add('hidden');
+    emptyState.classList.remove('hidden');
+  }
 }
 
 function renderStorePill(storeName, count, elapsedMs, items = [], isInstantCache = false) {
