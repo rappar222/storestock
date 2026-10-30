@@ -34,6 +34,35 @@ async def startup_event():
     except Exception as e:
         print(f"[Startup] Error starting alert watcher: {e}")
 
+    try:
+        # Build and bundle StoreStock Companion browser extension for Chrome, Edge, Firefox, Brave, Opera, Opera GX
+        import zipfile
+        base_dir = os.path.dirname(__file__)
+        ext_src = os.path.join(base_dir, "extension")
+        ext_dest_dir = os.path.join(base_dir, "static", "extension")
+        os.makedirs(ext_dest_dir, exist_ok=True)
+
+        # Generate a valid green PNG icon if not exists
+        icon_path = os.path.join(ext_src, "icon.png")
+        if not os.path.exists(icon_path):
+            with open(icon_path, "wb") as f_icon:
+                # 1x1 green dot PNG bytes
+                f_icon.write(b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\x18\x05\xa3`\x00\x00\x00\x82\x00\x81\xcb<vN\x00\x00\x00\x00IEND\xaeB`\x82')
+
+        zip_target = os.path.join(ext_dest_dir, "storestock-companion.zip")
+        xpi_target = os.path.join(ext_dest_dir, "storestock-companion.xpi")
+
+        for target in [zip_target, xpi_target]:
+            with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as zf:
+                for root, _, files in os.walk(ext_src):
+                    for file in files:
+                        full_f = os.path.join(root, file)
+                        rel_f = os.path.relpath(full_f, ext_src)
+                        zf.write(full_f, rel_f)
+        print("[Startup] StoreStock Companion extensions (.zip and .xpi) bundled successfully.")
+    except Exception as e:
+        print(f"[Startup] Error bundling browser extension: {e}")
+
 # Enable CORS for external client/API testing
 app.add_middleware(
     CORSMiddleware,
@@ -128,6 +157,30 @@ async def download_architecture_endpoint(password: str = Query(..., description=
         path=svg_file,
         filename="storestock_architecture.svg",
         media_type="image/svg+xml"
+    )
+
+@app.get("/download/extension/chrome")
+@app.get("/download/extension/zip")
+async def download_extension_chrome():
+    zip_path = os.path.join(static_dir, "extension", "storestock-companion.zip")
+    if not os.path.exists(zip_path):
+        raise HTTPException(status_code=404, detail="Extension zip not built yet.")
+    return FileResponse(
+        path=zip_path,
+        filename="storestock-companion.zip",
+        media_type="application/zip"
+    )
+
+@app.get("/download/extension/firefox")
+@app.get("/download/extension/xpi")
+async def download_extension_firefox():
+    xpi_path = os.path.join(static_dir, "extension", "storestock-companion.xpi")
+    if not os.path.exists(xpi_path):
+        raise HTTPException(status_code=404, detail="Extension xpi not built yet.")
+    return FileResponse(
+        path=xpi_path,
+        filename="storestock-companion.xpi",
+        media_type="application/x-xpinstall"
     )
 
 @app.get("/api/search", response_model=SearchResponse)

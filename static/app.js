@@ -2646,12 +2646,116 @@ if (archAuthForm) {
   });
 }
 
+// StoreStock Companion Extension UI & Detection Handler
+function setupExtensionModal() {
+  const openBtn = document.getElementById('openExtensionModalBtn');
+  const modal = document.getElementById('extensionModal');
+  const closeBtn = document.getElementById('closeExtensionModalBtn');
+  const closeFooterBtn = document.getElementById('closeExtensionModalFooterBtn');
+  const dot = document.getElementById('extStatusDot');
+  const label = document.getElementById('extStatusText');
+  const statusBanner = document.getElementById('extModalStatusBanner');
+  const tabBtns = document.querySelectorAll('.ext-tab-btn');
+  const panels = document.querySelectorAll('.ext-panel');
+
+  if (!modal) return;
+
+  function openModal() {
+    modal.classList.remove('hidden');
+    safeRenderIcons();
+  }
+
+  function closeModal() {
+    modal.classList.add('hidden');
+  }
+
+  if (openBtn) openBtn.addEventListener('click', openModal);
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+  if (closeFooterBtn) closeFooterBtn.addEventListener('click', closeModal);
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // Tab switching
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const browser = btn.getAttribute('data-browser');
+      tabBtns.forEach(b => {
+        b.classList.remove('bg-emerald-500', 'text-slate-950', 'font-bold');
+        b.classList.add('bg-slate-800/80', 'text-slate-400', 'font-semibold');
+      });
+      btn.classList.remove('bg-slate-800/80', 'text-slate-400', 'font-semibold');
+      btn.classList.add('bg-emerald-500', 'text-slate-950', 'font-bold');
+
+      panels.forEach(p => {
+        if (p.getAttribute('data-browser') === browser) {
+          p.classList.remove('hidden');
+        } else {
+          p.classList.add('hidden');
+        }
+      });
+      safeRenderIcons();
+    });
+  });
+
+  // Auto-detect user browser to select default tab
+  const ua = navigator.userAgent.toLowerCase();
+  let defaultBrowser = 'firefox';
+  if (ua.includes('edg/')) {
+    defaultBrowser = 'edge';
+  } else if (ua.includes('opr/') || ua.includes('opera')) {
+    defaultBrowser = 'opera';
+  } else if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
+    defaultBrowser = 'brave';
+  } else if (ua.includes('chrome')) {
+    defaultBrowser = 'chrome';
+  } else if (ua.includes('firefox')) {
+    defaultBrowser = 'firefox';
+  }
+
+  const matchingBtn = Array.from(tabBtns).find(b => b.getAttribute('data-browser') === defaultBrowser);
+  if (matchingBtn) matchingBtn.click();
+
+  // Active Companion Detection
+  function markExtensionActive() {
+    if (dot) {
+      dot.className = "w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-500/80";
+    }
+    if (label) {
+      label.textContent = "Laptop Active";
+      label.className = "hidden md:inline text-emerald-400 font-bold";
+    }
+    if (statusBanner) {
+      statusBanner.className = "p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center space-x-3 text-xs";
+      statusBanner.innerHTML = `
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shrink-0"></span>
+        <div class="flex-1">
+          <span class="font-bold text-emerald-400">Companion Active & Connected</span>
+          <p class="text-[11px] text-slate-300 mt-0.5">Your browser is actively unblocking Altex, eMAG, PC Garage, Auchan, Flanco, evoMAG, and Amazon. All search executes 100% locally on your laptop.</p>
+        </div>
+      `;
+    }
+  }
+
+  if (window.STORESTOCK_COMPANION_ACTIVE || document.documentElement.hasAttribute('data-storestock-companion-active')) {
+    markExtensionActive();
+  }
+
+  window.addEventListener('message', (ev) => {
+    if (ev.data && ev.data.type === 'STORESTOCK_COMPANION_READY') {
+      markExtensionActive();
+    }
+  });
+}
+
 // Robust Initialization
 async function initApp() {
   try {
     await loadCountries();
     setupGeolocation();
     loadAlerts();
+    setupExtensionModal();
     if (searchInput) {
       searchInput.value = '';
     }
