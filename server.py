@@ -43,6 +43,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def add_no_cache_header(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.endswith(".js") or request.url.path == "/":
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 engine = SearchEngine()
 
 # Mount static folder
@@ -53,7 +62,15 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
     with open(os.path.join(static_dir, "index.html"), "r", encoding="utf-8") as f:
-        return f.read()
+        content = f.read()
+    return HTMLResponse(
+        content=content,
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon_endpoint():
@@ -134,34 +151,9 @@ async def search_endpoint(
     )
 
 @app.get("/api/stream")
-async def stream_endpoint(
-    q: str = Query(..., description="Product query to search"),
-    country: str = Query("RO", description="ISO 2-letter country code"),
-    lat: Optional[float] = Query(None, description="User latitude for distance calculation"),
-    lon: Optional[float] = Query(None, description="User longitude for distance calculation"),
-    cached_only: bool = Query(True, description="Only return instant cache without server outbound scrapes")
-):
-    """
-    Zero Outbound Server Scrapes:
-    Only returns instant database cache (sub-2ms). The TrueNAS server never makes
-    outbound scraper requests to retailer websites, keeping your home IP 100% safe.
-    """
-    async def event_generator():
-        # Always enforce cached_only=True: Zero server scrapes!
-        async for event in engine.stream_search(q, country_code=country, user_lat=lat, user_lon=lon, cached_only=True):
-            yield f"data: {json.dumps(event)}\n\n"
-        # Done event
-        yield f"data: {json.dumps({'type': 'done'})}\n\n"
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Content-Type": "text/event-stream"
-        }
-    )
+async def stream_endpoint():
+    # Permanently disabled to protect home IP: 100% of search is client-side
+    raise HTTPException(status_code=410, detail="Server stream disabled. Search is 100% client-side from browser.")
 
 @app.post("/api/cache/sync")
 async def sync_client_cache(payload: dict = Body(...)):
