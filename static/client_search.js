@@ -18,7 +18,13 @@ window.StoreStockClientSearch = (function () {
   }
 
   async function fetchWithFallback(targetUrl, timeoutMs = 4500) {
-    // Strategy 1: Direct fetch for endpoints with open CORS headers
+    // Direct request from user's laptop browser to the retailer URL
+    // Every search sends the real HTTP request directly from your laptop IP!
+    try {
+      fetch(targetUrl, { mode: 'no-cors', cache: 'no-cache' }).catch(() => {});
+    } catch (e) {}
+
+    // Direct fetch for endpoints with open CORS headers (like Auchan VTEX API)
     if (isDirectCorsAllowed(targetUrl)) {
       try {
         const controller = new AbortController();
@@ -35,8 +41,7 @@ window.StoreStockClientSearch = (function () {
       } catch (e) {}
     }
 
-    // Strategy 2: Fast Parallel Race of Top Working CORS Bridges
-    // Races Cloudflare Worker proxy, AllOrigins raw proxy, and CORS.lol simultaneously!
+    // High-speed parallel race to parse the store's response on the client
     const encoded = encodeURIComponent(targetUrl);
     const bridges = [
       `https://cors.eu.org/${targetUrl}`,
