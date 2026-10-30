@@ -255,7 +255,7 @@ window.StoreStockClientSearch = (function () {
   // Scraper 6: evoMAG Romania
   async function searchEvoMag(query) {
     const t0 = performance.now();
-    const url = `https://www.evomag.ro/cauta/${encodeURIComponent(query)}`;
+    const url = `https://www.evomag.ro/?sn.q=${encodeURIComponent(query)}`;
     const html = await fetchWithFallback(url, 4500);
     const elapsed = Math.round(performance.now() - t0);
     if (!html) return { store_name: "evoMAG", elapsed_ms: elapsed, items: [] };
