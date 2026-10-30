@@ -1,6 +1,6 @@
 /**
- * StoreStock Client-Side Scraper & Distributed Cache Agent
- * Runs 100% on the user's client device/browser.
+ * StoreStock 100% Client-Side Search & Distributed Cache Agent
+ * Runs entirely on the user's client device/browser.
  * The TrueNAS server never makes outbound scraper calls to protect your server IP.
  */
 
@@ -9,7 +9,7 @@ window.StoreStockClientSearch = (function () {
   function isDirectCorsAllowed(targetUrl) {
     try {
       const parsed = new URL(targetUrl);
-      // VTEX Auchan public search API allows open CORS
+      // VTEX Auchan public search API allows open CORS directly from browser
       if (parsed.hostname.includes("auchan.ro") && parsed.pathname.includes("/api/catalog_system/")) {
         return true;
       }
@@ -17,8 +17,8 @@ window.StoreStockClientSearch = (function () {
     return false;
   }
 
-  async function fetchWithFallback(targetUrl, timeoutMs = 8000) {
-    // Strategy 1: Direct fetch ONLY for known CORS-friendly API endpoints (avoids red console errors on HTML pages)
+  async function fetchWithFallback(targetUrl, timeoutMs = 4500) {
+    // Strategy 1: Direct fetch for endpoints with open CORS headers
     if (isDirectCorsAllowed(targetUrl)) {
       try {
         const controller = new AbortController();
@@ -32,41 +32,51 @@ window.StoreStockClientSearch = (function () {
           const text = await res.text();
           if (text && text.length > 50) return text;
         }
-      } catch (e) {
-        // Fall through to bridges if direct API fails
-      }
+      } catch (e) {}
     }
 
-    // Strategy 2: CodeTabs CORS Bridge (ultra-fast for HTML text)
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      const codeTabsUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
-      const res = await fetch(codeTabsUrl, { signal: controller.signal });
-      clearTimeout(timer);
-      if (res.ok) {
-        const text = await res.text();
-        if (text && text.length > 200) return text;
-      }
-    } catch (e) {
-      // Continue to next bridge
-    }
+    // Strategy 2: Fast Parallel Race of Top Working CORS Bridges
+    // Races Cloudflare Worker proxy, AllOrigins raw proxy, and CORS.lol simultaneously!
+    const encoded = encodeURIComponent(targetUrl);
+    const bridges = [
+      `https://cors.eu.org/${targetUrl}`,
+      `https://api.allorigins.win/raw?url=${encoded}`,
+      `https://api.cors.lol/?url=${encoded}`
+    ];
 
-    // Strategy 3: AllOrigins JSON API wrapper
-    try {
+    async function tryBridge(bUrl) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
-      const allOriginsUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-      const res = await fetch(allOriginsUrl, { signal: controller.signal });
-      clearTimeout(timer);
-      if (res.ok) {
-        const json = await res.json();
-        if (json && json.contents && json.contents.length > 200) {
-          return json.contents;
+      try {
+        const res = await fetch(bUrl, { signal: controller.signal });
+        clearTimeout(timer);
+        if (res.ok) {
+          const text = await res.text();
+          if (text && text.length > 150) return text;
         }
+      } catch (e) {
+        clearTimeout(timer);
       }
+      throw new Error("Bridge attempt failed");
+    }
+
+    try {
+      // First active bridge that responds with valid content wins!
+      return await Promise.any(bridges.map(b => tryBridge(b)));
     } catch (e) {
-      // Fallback exhausted
+      // Strategy 3: JSON wrapper fallback
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 3500);
+        const res = await fetch(`https://api.allorigins.win/get?url=${encoded}`, { signal: controller.signal });
+        clearTimeout(timer);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.contents && data.contents.length > 150) {
+            return data.contents;
+          }
+        }
+      } catch (err) {}
     }
 
     return null;

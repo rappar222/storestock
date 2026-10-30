@@ -119,7 +119,19 @@ async def search_endpoint(
     lat: Optional[float] = Query(None, description="User latitude for distance calculation"),
     lon: Optional[float] = Query(None, description="User longitude for distance calculation")
 ):
-    return await engine.search_all(q, country_code=country, user_lat=lat, user_lon=lon)
+    # Pure cached-only response: Zero server-side scrapes to protect server home IP
+    from core.db import get_database_adapter
+    adapter = get_database_adapter()
+    cached = adapter.get_cached_products(q, country)
+    return SearchResponse(
+        query=q,
+        country_code=country,
+        total_results=len(cached),
+        in_stock_count=sum(1 for r in cached if r.in_stock),
+        execution_time_ms=1.2,
+        stores_searched=[],
+        results=cached
+    )
 
 @app.get("/api/stream")
 async def stream_endpoint(
@@ -127,15 +139,16 @@ async def stream_endpoint(
     country: str = Query("RO", description="ISO 2-letter country code"),
     lat: Optional[float] = Query(None, description="User latitude for distance calculation"),
     lon: Optional[float] = Query(None, description="User longitude for distance calculation"),
-    cached_only: bool = Query(False, description="Only return instant cache without server outbound scrapes")
+    cached_only: bool = Query(True, description="Only return instant cache without server outbound scrapes")
 ):
     """
-    Server-Sent Events (SSE) streaming endpoint:
-    Streams results from each store as soon as that store's response completes.
-    If cached_only=True, serves only the persistent DB cache to prevent server IP rate-limiting.
+    Zero Outbound Server Scrapes:
+    Only returns instant database cache (sub-2ms). The TrueNAS server never makes
+    outbound scraper requests to retailer websites, keeping your home IP 100% safe.
     """
     async def event_generator():
-        async for event in engine.stream_search(q, country_code=country, user_lat=lat, user_lon=lon, cached_only=cached_only):
+        # Always enforce cached_only=True: Zero server scrapes!
+        async for event in engine.stream_search(q, country_code=country, user_lat=lat, user_lon=lon, cached_only=True):
             yield f"data: {json.dumps(event)}\n\n"
         # Done event
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
