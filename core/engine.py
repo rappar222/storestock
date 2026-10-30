@@ -348,7 +348,6 @@ class SearchEngine:
                 and not any(x in getattr(p, "store_id", "").lower() for x in ["auto", "proleasing", "dedeman", "hornbach", "leroy", "mega", "freshful", "sezamo", "kaufland", "bringo"])
             ]
             return tech_providers if tech_providers else all_for_country[:6]
-            return tech_providers if tech_providers else all_for_country[:6]
 
         # Default general query: prioritize top 6 general & specialized platforms
         return all_for_country[:6]

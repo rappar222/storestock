@@ -1561,65 +1561,27 @@ function executeSearch(query) {
   };
   renderLatencyDisplay();
 
-  let sseCompleted = false;
-  let clientCompleted = !window.StoreStockClientSearch;
-
-  function checkAllSearchesComplete() {
-    if (sseCompleted && clientCompleted) {
-      if (thisBatchId !== currentSearchBatchId) return;
-      loadingIndicator.classList.add('hidden');
-      timingStats.streamDone = true;
-      if (timingStats.dataElapsed === null) {
-        timingStats.dataReadyTime = performance.now();
-        timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
-      }
-      renderLatencyDisplay();
-      updateStats();
-      if (currentResults.length === 0) {
-        emptyState.classList.remove('hidden');
-      } else {
-        emptyState.classList.add('hidden');
-      }
+  function finishSearch() {
+    if (thisBatchId !== currentSearchBatchId) return;
+    loadingIndicator.classList.add('hidden');
+    timingStats.streamDone = true;
+    if (timingStats.dataElapsed === null) {
+      timingStats.dataReadyTime = performance.now();
+      timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
+    }
+    renderLatencyDisplay();
+    updateStats();
+    if (currentResults.length === 0) {
+      emptyState.classList.remove('hidden');
+    } else {
+      emptyState.classList.add('hidden');
     }
   }
 
-  // Request TrueNAS instant database cache only (0 server outbound scrapes)
-  let url = `/api/stream?q=${encodeURIComponent(query.trim())}&country=${country}&cached_only=true`;
+  // Request high-speed SSE stream (instant database cache + parallel store scrapers)
+  let url = `/api/stream?q=${encodeURIComponent(query.trim())}&country=${country}`;
   if (userCoords) {
     url += `&lat=${userCoords.lat}&lon=${userCoords.lon}`;
-  }
-
-  // Execute client-side scrapers in parallel directly from user browser!
-  if (window.StoreStockClientSearch) {
-    window.StoreStockClientSearch.searchAll(query.trim(), country, (p) => {
-      if (thisBatchId !== currentSearchBatchId) return;
-      renderStorePill(p.store_name, p.items.length, p.elapsed_ms, p.items || [], false);
-      if (p.items && p.items.length > 0) {
-        emptyState.classList.add('hidden');
-        const urlMap = new Map(currentResults.map((r, idx) => [r.product_url, idx]));
-        p.items.forEach(newItem => {
-          if (urlMap.has(newItem.product_url)) {
-            const idx = urlMap.get(newItem.product_url);
-            currentResults[idx] = newItem;
-          } else {
-            currentResults.push(newItem);
-            urlMap.set(newItem.product_url, currentResults.length - 1);
-          }
-        });
-        if (timingStats.dataElapsed === null) {
-          timingStats.dataReadyTime = performance.now();
-          timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
-          renderLatencyDisplay();
-        }
-        renderResults();
-        renderBrandChips();
-        updateMapMarkers();
-        updateStats();
-      }
-    }, userCoords).finally(() => {
-      clientCompleted = true;
-      checkAllSearchesComplete();
-    });
   }
 
   const eventSource = new EventSource(url);
@@ -1661,8 +1623,7 @@ function executeSearch(query) {
         }
       } else if (data.type === 'done') {
         eventSource.close();
-        sseCompleted = true;
-        checkAllSearchesComplete();
+        finishSearch();
       }
     } catch (e) {
       console.error("Error parsing SSE event:", e);
@@ -1671,8 +1632,7 @@ function executeSearch(query) {
 
   eventSource.onerror = (err) => {
     eventSource.close();
-    sseCompleted = true;
-    checkAllSearchesComplete();
+    finishSearch();
   };
 }
 
