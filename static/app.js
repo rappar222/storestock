@@ -1587,16 +1587,23 @@ function executeSearch(query) {
   renderAiIntent(aiIntent);
   renderStoreSearchLinks(query.trim(), country);
 
-  // 2. 100% Client-Side Parallel Search executed directly on user's laptop / browser!
-  // ZERO server-side streaming or search calls. All requests come directly from the laptop.
-  if (window.StoreStockClientSearch) {
-    window.StoreStockClientSearch.searchAll(query.trim(), country, (p) => {
+  // 2. Fetch from Ingested Affiliate Catalog Database via /api/search
+  const fetchServerPromise = (async () => {
+    try {
+      let url = `/api/search?q=${encodeURIComponent(query.trim())}&country=${encodeURIComponent(country)}`;
+      if (userCoords && userCoords.lat && userCoords.lon) {
+        url += `&lat=${userCoords.lat}&lon=${userCoords.lon}`;
+      }
+      const resp = await fetch(url);
+      if (!resp.ok) return;
+      const data = await resp.json();
       if (thisBatchId !== currentSearchBatchId) return;
-      renderStorePill(p.store_name, p.items.length, p.elapsed_ms, p.items || [], false);
-      if (p.items && p.items.length > 0) {
+
+      const serverItems = data.results || [];
+      if (serverItems.length > 0) {
         emptyState.classList.add('hidden');
         const urlMap = new Map(currentResults.map((r, idx) => [r.product_url, idx]));
-        p.items.forEach(newItem => {
+        serverItems.forEach(newItem => {
           if (urlMap.has(newItem.product_url)) {
             const idx = urlMap.get(newItem.product_url);
             currentResults[idx] = newItem;
@@ -1605,6 +1612,19 @@ function executeSearch(query) {
             urlMap.set(newItem.product_url, currentResults.length - 1);
           }
         });
+
+        // Group server items by store and render store pills
+        const storeGroups = {};
+        serverItems.forEach(it => {
+          const s = it.store_name || "Catalog";
+          if (!storeGroups[s]) storeGroups[s] = [];
+          storeGroups[s].push(it);
+        });
+
+        Object.keys(storeGroups).forEach(sName => {
+          renderStorePill(sName, storeGroups[sName].length, data.execution_time_ms || 2, storeGroups[sName], true);
+        });
+
         if (timingStats.dataElapsed === null) {
           timingStats.dataReadyTime = performance.now();
           timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
@@ -1615,26 +1635,57 @@ function executeSearch(query) {
         updateMapMarkers();
         updateStats();
       }
-    }, userCoords).finally(() => {
-      if (thisBatchId !== currentSearchBatchId) return;
-      loadingIndicator.classList.add('hidden');
-      timingStats.streamDone = true;
-      if (timingStats.dataElapsed === null) {
-        timingStats.dataReadyTime = performance.now();
-        timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
-      }
-      renderLatencyDisplay();
-      updateStats();
-      if (currentResults.length === 0) {
-        emptyState.classList.remove('hidden');
-      } else {
-        emptyState.classList.add('hidden');
-      }
-    });
-  } else {
+    } catch (err) {
+      console.warn("[App] Server catalog search error:", err);
+    }
+  })();
+
+  // 3. Parallel Direct Client Search (e.g. evoMAG Nosto API)
+  const clientPromise = (window.StoreStockClientSearch && window.StoreStockClientSearch.searchAll)
+    ? window.StoreStockClientSearch.searchAll(query.trim(), country, (p) => {
+        if (thisBatchId !== currentSearchBatchId) return;
+        renderStorePill(p.store_name, p.items.length, p.elapsed_ms, p.items || [], false);
+        if (p.items && p.items.length > 0) {
+          emptyState.classList.add('hidden');
+          const urlMap = new Map(currentResults.map((r, idx) => [r.product_url, idx]));
+          p.items.forEach(newItem => {
+            if (urlMap.has(newItem.product_url)) {
+              const idx = urlMap.get(newItem.product_url);
+              currentResults[idx] = newItem;
+            } else {
+              currentResults.push(newItem);
+              urlMap.set(newItem.product_url, currentResults.length - 1);
+            }
+          });
+          if (timingStats.dataElapsed === null) {
+            timingStats.dataReadyTime = performance.now();
+            timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
+            renderLatencyDisplay();
+          }
+          renderResults();
+          renderBrandChips();
+          updateMapMarkers();
+          updateStats();
+        }
+      }, userCoords)
+    : Promise.resolve();
+
+  Promise.allSettled([fetchServerPromise, clientPromise]).finally(() => {
+    if (thisBatchId !== currentSearchBatchId) return;
     loadingIndicator.classList.add('hidden');
-    emptyState.classList.remove('hidden');
-  }
+    timingStats.streamDone = true;
+    if (timingStats.dataElapsed === null) {
+      timingStats.dataReadyTime = performance.now();
+      timingStats.dataElapsed = Math.round(timingStats.dataReadyTime - timingStats.searchStartTime);
+    }
+    renderLatencyDisplay();
+    updateStats();
+    if (currentResults.length === 0) {
+      emptyState.classList.remove('hidden');
+    } else {
+      emptyState.classList.add('hidden');
+    }
+  });
 }
 
 // Stores that block cross-origin search get a "search on store" link instead

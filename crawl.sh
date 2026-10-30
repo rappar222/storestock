@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
-echo "🛑 Background crawler has been permanently disabled to protect your home IP."
-echo "ℹ️ StoreStock now uses 100% Client-Side Search (Zero server IP footprint)."
-exit 0
+# StoreStock Catalog Sync Runner
+set -e
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cd "$DIR"
+python3 crawler.py sync "$@"

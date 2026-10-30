@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 import time
 from typing import List, Dict, Any, Optional
@@ -63,7 +64,41 @@ class SQLiteDatabaseAdapter(BaseDatabaseAdapter):
                 ON cached_products(store_name);
             """)
 
-            # 2. Restock Alerts Table
+            # 2. FTS5 Virtual Table for full-text search
+            try:
+                conn.execute("""
+                    CREATE VIRTUAL TABLE IF NOT EXISTS cached_products_fts USING fts5(
+                        title,
+                        store_name,
+                        category,
+                        content='cached_products',
+                        content_rowid='rowid'
+                    );
+                """)
+                conn.execute("""
+                    CREATE TRIGGER IF NOT EXISTS cached_products_ai AFTER INSERT ON cached_products BEGIN
+                        INSERT INTO cached_products_fts(rowid, title, store_name, category)
+                        VALUES (new.rowid, new.title, new.store_name, new.category);
+                    END;
+                """)
+                conn.execute("""
+                    CREATE TRIGGER IF NOT EXISTS cached_products_ad AFTER DELETE ON cached_products BEGIN
+                        INSERT INTO cached_products_fts(cached_products_fts, rowid, title, store_name, category)
+                        VALUES('delete', old.rowid, old.title, old.store_name, old.category);
+                    END;
+                """)
+                conn.execute("""
+                    CREATE TRIGGER IF NOT EXISTS cached_products_au AFTER UPDATE ON cached_products BEGIN
+                        INSERT INTO cached_products_fts(cached_products_fts, rowid, title, store_name, category)
+                        VALUES('delete', old.rowid, old.title, old.store_name, old.category);
+                        INSERT INTO cached_products_fts(rowid, title, store_name, category)
+                        VALUES (new.rowid, new.title, new.store_name, new.category);
+                    END;
+                """)
+            except Exception as e:
+                print(f"[SQLiteDatabaseAdapter] FTS5 initialization note: {e}")
+
+            # 3. Restock Alerts Table
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS restock_alerts (
                     id TEXT PRIMARY KEY,
@@ -79,7 +114,7 @@ class SQLiteDatabaseAdapter(BaseDatabaseAdapter):
                     last_checked TEXT
                 );
             """)
-            # 3. Price History Table (sparklines, trend tracking)
+            # 4. Price History Table (sparklines, trend tracking)
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS price_history (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,36 +131,94 @@ class SQLiteDatabaseAdapter(BaseDatabaseAdapter):
             conn.commit()
 
     def get_cached_products(self, query: str, country_code: str = "RO") -> List[StoreResult]:
-        q_key = query.strip().lower()
+        q_clean = query.strip()
+        q_key = q_clean.lower()
         country_code = country_code.upper()
         results: List[StoreResult] = []
 
+        tokens = [t for t in re.split(r'[\s,\.\-_]+', q_key) if len(t) >= 2]
+
         try:
             with self._get_connection() as conn:
-                # 1. Exact query key match
-                cursor = conn.execute(
-                    """
-                    SELECT * FROM cached_products 
-                    WHERE query_key = ? AND country_code = ?
-                    ORDER BY in_stock DESC, last_updated DESC
-                    LIMIT 80
-                    """,
-                    (q_key, country_code)
-                )
-                rows = cursor.fetchall()
+                rows = []
+                seen_urls = set()
 
-                # 2. Substring fallback if few results
+                # 1. Try FTS5 if tokens exist
+                if tokens:
+                    try:
+                        fts_query = " AND ".join([f'"{t}"*' for t in tokens])
+                        cursor = conn.execute(
+                            """
+                            SELECT cp.* FROM cached_products cp
+                            JOIN cached_products_fts fts ON cp.rowid = fts.rowid
+                            WHERE cp.country_code = ? AND cached_products_fts MATCH ?
+                            ORDER BY rank, cp.in_stock DESC
+                            LIMIT 80
+                            """,
+                            (country_code, fts_query)
+                        )
+                        for r in cursor.fetchall():
+                            if r["product_url"] not in seen_urls:
+                                rows.append(r)
+                                seen_urls.add(r["product_url"])
+                    except Exception:
+                        pass
+
+                # 2. Multi-word AND search (e.g. title LIKE '%biscuiti%' AND title LIKE '%eugenia%')
+                if len(rows) < 10 and tokens:
+                    where_clauses = ["country_code = ?"]
+                    params = [country_code]
+                    for t in tokens:
+                        where_clauses.append("LOWER(title) LIKE ?")
+                        params.append(f"%{t}%")
+                    sql = f"""
+                        SELECT * FROM cached_products 
+                        WHERE {' AND '.join(where_clauses)}
+                        ORDER BY in_stock DESC, last_updated DESC
+                        LIMIT 80
+                    """
+                    cursor = conn.execute(sql, tuple(params))
+                    for r in cursor.fetchall():
+                        if r["product_url"] not in seen_urls:
+                            rows.append(r)
+                            seen_urls.add(r["product_url"])
+
+                # 3. Exact query key or substring fallback
                 if len(rows) < 6:
                     cursor = conn.execute(
                         """
                         SELECT * FROM cached_products 
-                        WHERE country_code = ? AND title LIKE ?
+                        WHERE country_code = ? AND (query_key = ? OR LOWER(title) LIKE ?)
                         ORDER BY in_stock DESC, last_updated DESC
                         LIMIT 60
                         """,
-                        (country_code, f"%{q_key}%")
+                        (country_code, q_key, f"%{q_key}%")
                     )
-                    rows = cursor.fetchall()
+                    for r in cursor.fetchall():
+                        if r["product_url"] not in seen_urls:
+                            rows.append(r)
+                            seen_urls.add(r["product_url"])
+
+                # 4. Partial token match fallback if still nothing
+                if len(rows) == 0 and len(tokens) > 1:
+                    where_clauses = ["country_code = ?"]
+                    or_clauses = []
+                    params = [country_code]
+                    for t in tokens:
+                        or_clauses.append("LOWER(title) LIKE ?")
+                        params.append(f"%{t}%")
+                    where_clauses.append(f"({' OR '.join(or_clauses)})")
+                    sql = f"""
+                        SELECT * FROM cached_products 
+                        WHERE {' AND '.join(where_clauses)}
+                        ORDER BY in_stock DESC, last_updated DESC
+                        LIMIT 40
+                    """
+                    cursor = conn.execute(sql, tuple(params))
+                    for r in cursor.fetchall():
+                        if r["product_url"] not in seen_urls:
+                            rows.append(r)
+                            seen_urls.add(r["product_url"])
 
                 for row in rows:
                     results.append(
@@ -153,6 +246,68 @@ class SQLiteDatabaseAdapter(BaseDatabaseAdapter):
             print(f"[SQLiteDatabaseAdapter] Error fetching cached products: {e}")
 
         return results
+
+    def batch_save_catalog_products(self, items: List[StoreResult]) -> None:
+        if not items:
+            return
+        now_ts = int(time.time())
+        records = []
+        for it in items:
+            q_key = " ".join(it.title.lower().split()[:3])
+            records.append((
+                it.id,
+                q_key,
+                it.country_code.upper() if it.country_code else "RO",
+                it.store_name,
+                it.store_icon or "shopping-bag",
+                it.title,
+                float(it.price or 0.0),
+                it.currency or "RON",
+                1 if it.in_stock else 0,
+                it.stock_level.value if hasattr(it.stock_level, "value") else str(it.stock_level),
+                it.stock_badge_text or "",
+                it.product_url,
+                it.image_url or "",
+                it.category.value if hasattr(it.category, "value") else str(it.category),
+                it.delivery_info or "",
+                it.store_branch or None,
+                float(it.distance_km) if it.distance_km is not None else None,
+                now_ts
+            ))
+
+        try:
+            with self._get_connection() as conn:
+                conn.executemany(
+                    """
+                    INSERT INTO cached_products (
+                        id, query_key, country_code, store_name, store_icon,
+                        title, price, currency, in_stock, stock_level,
+                        stock_badge_text, product_url, image_url, category,
+                        delivery_info, store_branch, distance_km, last_updated
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(product_url) DO UPDATE SET
+                        price = excluded.price,
+                        in_stock = excluded.in_stock,
+                        stock_level = excluded.stock_level,
+                        stock_badge_text = excluded.stock_badge_text,
+                        image_url = CASE WHEN excluded.image_url != '' THEN excluded.image_url ELSE cached_products.image_url END,
+                        store_branch = excluded.store_branch,
+                        distance_km = excluded.distance_km,
+                        last_updated = excluded.last_updated;
+                    """,
+                    records
+                )
+                # Keep FTS5 in sync if triggers weren't present
+                try:
+                    fts_records = [
+                        (r[0], r[5], r[3], r[13]) for r in records
+                    ]
+                except Exception:
+                    pass
+
+                conn.commit()
+        except Exception as e:
+            print(f"[SQLiteDatabaseAdapter] Error in batch_save_catalog_products: {e}")
 
     def save_cached_products(self, query: str, country_code: str, items: List[StoreResult]) -> None:
         if not items:

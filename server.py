@@ -1,9 +1,13 @@
 import os
+import time
 import json
 import asyncio
 import smtplib
 import datetime
-import httpx
+try:
+    import httpx
+except ImportError:
+    httpx = None
 import base64
 from email.message import EmailMessage
 from typing import Optional
@@ -26,6 +30,14 @@ async def startup_event():
         loop.set_default_executor(ThreadPoolExecutor(max_workers=32))
     except Exception as e:
         print(f"[Startup] Error setting thread pool executor: {e}")
+
+    try:
+        # Ensure initial affiliate catalog seed data is ready
+        from core.catalogs import get_catalog_manager
+        cm = get_catalog_manager()
+        cm.ensure_seeded()
+    except Exception as e:
+        print(f"[Startup] Error ensuring catalog seeded: {e}")
 
     try:
         # Launch background restock alert watcher
@@ -138,19 +150,82 @@ async def search_endpoint(
     lat: Optional[float] = Query(None, description="User latitude for distance calculation"),
     lon: Optional[float] = Query(None, description="User longitude for distance calculation")
 ):
-    # Pure cached-only response: Zero server-side scrapes to protect server home IP
+    t0 = time.time()
     from core.db import get_database_adapter
     adapter = get_database_adapter()
     cached = adapter.get_cached_products(q, country)
+
+    # Calculate distance if user location provided
+    if lat is not None and lon is not None:
+        from core.branches import calculate_distance
+        for r in cached:
+            if r.latitude is not None and r.longitude is not None:
+                r.distance_km = round(calculate_distance(lat, lon, r.latitude, r.longitude), 1)
+
+    stores = list(dict.fromkeys(r.store_name for r in cached))
+    elapsed_ms = round((time.time() - t0) * 1000, 2)
     return SearchResponse(
         query=q,
         country_code=country,
         total_results=len(cached),
         in_stock_count=sum(1 for r in cached if r.in_stock),
-        execution_time_ms=1.2,
-        stores_searched=[],
+        execution_time_ms=elapsed_ms,
+        stores_searched=stores,
         results=cached
     )
+
+@app.get("/api/catalogs/feeds")
+async def list_catalog_feeds():
+    from core.catalogs import get_catalog_manager
+    manager = get_catalog_manager()
+    return manager.list_feeds()
+
+@app.post("/api/catalogs/feeds")
+async def add_or_update_catalog_feed(feed: dict = Body(...)):
+    from core.catalogs import get_catalog_manager, FeedConfig
+    manager = get_catalog_manager()
+    config = FeedConfig(**feed)
+    updated = manager.add_or_update_feed(config)
+    return updated
+
+@app.delete("/api/catalogs/feeds/{feed_id}")
+async def delete_catalog_feed(feed_id: str):
+    from core.catalogs import get_catalog_manager
+    manager = get_catalog_manager()
+    success = manager.delete_feed(feed_id)
+    return {"success": success}
+
+@app.post("/api/catalogs/sync")
+async def sync_catalog_feeds(
+    background_tasks: BackgroundTasks,
+    feed_id: Optional[str] = Query(None, description="Optional specific feed ID to sync")
+):
+    from core.catalogs import get_catalog_manager
+    manager = get_catalog_manager()
+
+    async def _run_sync():
+        if feed_id:
+            await manager.sync_feed(feed_id)
+        else:
+            await manager.sync_all_active_feeds()
+
+    background_tasks.add_task(_run_sync)
+    return {"status": "sync_started", "feed_id": feed_id or "all_active"}
+
+@app.get("/api/catalogs/stats")
+async def get_catalog_stats():
+    from core.db import get_database_adapter
+    from core.catalogs import get_catalog_manager
+    db = get_database_adapter()
+    cm = get_catalog_manager()
+    stats = db.get_stats()
+    feeds = cm.list_feeds()
+    return {
+        "database_stats": stats,
+        "total_configured_feeds": len(feeds),
+        "active_feeds": sum(1 for f in feeds if f.enabled),
+        "feeds": feeds
+    }
 
 @app.get("/api/stream")
 async def stream_endpoint():

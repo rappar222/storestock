@@ -7,7 +7,7 @@
  * PC Garage, Flanco, Auchan and Amazon block cross-origin reads, so those are offered
  * as "search on store" link-outs instead (see getSearchLinks).
  */
-console.log("%c[StoreStock v104] Direct Client-Side Search Active (ZERO Server Calls)", "background: #059669; color: #fff; font-weight: bold; font-size: 13px; padding: 4px 8px; border-radius: 4px;");
+console.log("%c[StoreStock v105] Affiliate Catalog & Hybrid Search Engine Active", "background: #059669; color: #fff; font-weight: bold; font-size: 13px; padding: 4px 8px; border-radius: 4px;");
 
 window.StoreStockClientSearch = (function () {
   const NOSTO_URL = "https://search.nosto.com/v1/graphql";
