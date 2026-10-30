@@ -3,6 +3,7 @@
  * Runs completely on the user's laptop/browser.
  * Direct fetch() from your browser to each store - ZERO proxies, ZERO server-side calls.
  */
+console.log("%c[StoreStock v101] 100% Direct Client-Side Search Active (ZERO Server Calls)", "background: #059669; color: #fff; font-weight: bold; font-size: 13px; padding: 4px 8px; border-radius: 4px;");
 
 window.StoreStockClientSearch = (function () {
   async function fetchWithFallback(targetUrl, timeoutMs = 6000) {

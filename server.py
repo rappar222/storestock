@@ -46,8 +46,12 @@ app.add_middleware(
 @app.middleware("http")
 async def add_no_cache_header(request: Request, call_next):
     response = await call_next(request)
-    if request.url.path.endswith(".js") or request.url.path == "/":
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    path = request.url.path
+    if path.endswith(".js") or path.endswith(".html") or path.endswith(".css") or path == "/" or path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0, post-check=0, pre-check=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
     return response

@@ -1,4 +1,5 @@
 // StoreStock Client Application with Store Map & Restock Tracker
+console.log("%c[StoreStock v101] Pure Direct Client Search Loaded (Zero Server Calls)", "background: #2563eb; color: #fff; font-weight: bold; font-size: 13px; padding: 4px 8px; border-radius: 4px;");
 
 let currentResults = [];
 let activeFilter = 'all'; // 'all', 'in_stock', 'nearby'
