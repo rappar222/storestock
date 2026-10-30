@@ -19,14 +19,20 @@ app = FastAPI(title="StoreStock Core Engine", version="1.1.0")
 
 @app.on_event("startup")
 async def startup_event():
-    # Expand default thread pool to 32 workers to prevent WAN scraper starvation
-    from concurrent.futures import ThreadPoolExecutor
-    loop = asyncio.get_running_loop()
-    loop.set_default_executor(ThreadPoolExecutor(max_workers=32))
+    try:
+        # Expand default thread pool to 32 workers to prevent WAN scraper starvation
+        from concurrent.futures import ThreadPoolExecutor
+        loop = asyncio.get_running_loop()
+        loop.set_default_executor(ThreadPoolExecutor(max_workers=32))
+    except Exception as e:
+        print(f"[Startup] Error setting thread pool executor: {e}")
 
-    # Launch background restock alert watcher
-    from core.alert_watcher import background_alert_watcher
-    asyncio.create_task(background_alert_watcher(interval_seconds=600))
+    try:
+        # Launch background restock alert watcher
+        from core.alert_watcher import background_alert_watcher
+        asyncio.create_task(background_alert_watcher(interval_seconds=600))
+    except Exception as e:
+        print(f"[Startup] Error starting alert watcher: {e}")
 
 # Enable CORS for external client/API testing
 app.add_middleware(

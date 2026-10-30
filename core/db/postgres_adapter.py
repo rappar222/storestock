@@ -103,6 +103,20 @@ class PostgresDatabaseAdapter(BaseDatabaseAdapter):
                         last_checked TEXT
                     );
                 """)
+                # 3. Price History Table
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS price_history (
+                        id SERIAL PRIMARY KEY,
+                        product_url TEXT NOT NULL,
+                        price DOUBLE PRECISION NOT NULL,
+                        currency TEXT NOT NULL,
+                        recorded_at BIGINT NOT NULL
+                    );
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_pg_price_history_url
+                    ON price_history(product_url, recorded_at DESC);
+                """)
             conn.commit()
 
     def get_cached_products(self, query: str, country_code: str = "RO") -> List[StoreResult]:
@@ -213,6 +227,20 @@ class PostgresDatabaseAdapter(BaseDatabaseAdapter):
                             last_updated = EXCLUDED.last_updated;
                     """
                     cur.executemany(sql, records)
+
+                    # Record price snapshots in price_history if price > 0
+                    history_records = [
+                        (it.product_url, float(it.price or 0.0), it.currency or "RON", now_ts)
+                        for it in items if float(it.price or 0.0) > 0
+                    ]
+                    if history_records:
+                        cur.executemany(
+                            """
+                            INSERT INTO price_history (product_url, price, currency, recorded_at)
+                            VALUES (%s, %s, %s, %s)
+                            """,
+                            history_records
+                        )
                 conn.commit()
         except Exception as e:
             print(f"[PostgresDatabaseAdapter] Error saving products: {e}")
@@ -289,6 +317,31 @@ class PostgresDatabaseAdapter(BaseDatabaseAdapter):
         except Exception as e:
             print(f"[PostgresDatabaseAdapter] Error deleting alert: {e}")
             return False
+
+    def get_price_history(self, product_url: str, limit: int = 15) -> List[Dict[str, Any]]:
+        history = []
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        SELECT price, currency, recorded_at
+                        FROM price_history
+                        WHERE product_url = %s
+                        ORDER BY recorded_at DESC
+                        LIMIT %s
+                        """,
+                        (product_url, limit)
+                    )
+                    for r in cur.fetchall():
+                        history.append({
+                            "price": float(r[0] if isinstance(r, (list, tuple)) else r["price"]),
+                            "currency": r[1] if isinstance(r, (list, tuple)) else r["currency"],
+                            "recorded_at": int(r[2] if isinstance(r, (list, tuple)) else r["recorded_at"])
+                        })
+        except Exception as e:
+            print(f"[PostgresDatabaseAdapter] Error fetching price history: {e}")
+        return history
 
     def get_stats(self) -> Dict[str, Any]:
         total_products = 0

@@ -9,10 +9,7 @@ window.StoreStockClientSearch = (function () {
   function isDirectCorsAllowed(targetUrl) {
     try {
       const parsed = new URL(targetUrl);
-      // Fenrir Altex catalog API and VTEX Auchan public API allow direct CORS
-      if (parsed.hostname.includes("altex.ro") && parsed.pathname.includes("/v2/catalog/search")) {
-        return true;
-      }
+      // VTEX Auchan public search API allows open CORS
       if (parsed.hostname.includes("auchan.ro") && parsed.pathname.includes("/api/catalog_system/")) {
         return true;
       }

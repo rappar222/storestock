@@ -318,9 +318,6 @@ class SQLiteDatabaseAdapter(BaseDatabaseAdapter):
         except Exception as e:
             print(f"[SQLiteDatabaseAdapter] Error fetching price history: {e}")
         return history
-        except Exception as e:
-            print(f"[SQLiteDatabaseAdapter] Error deleting alert: {e}")
-            return False
 
     def get_stats(self) -> Dict[str, Any]:
         """Returns disk size, object count, and SQLite pragmas."""
