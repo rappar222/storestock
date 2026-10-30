@@ -359,111 +359,27 @@ class SearchEngine:
         user_lat: Optional[float] = None,
         user_lon: Optional[float] = None
     ) -> SearchResponse:
+        """
+        Pure Local Cache Reader:
+        ZERO server outbound scraper requests to protect server home IP from bot detection.
+        """
         start_time = time.time()
         country_code = country_code.upper()
-        cache_key = f"{country_code}:{query.strip().lower()}"
-
-        ai_intent = analyze_user_intent(query)
-
-        # Check cache
-        if cache_key in self._cache:
-            cached_time, cached_results, cached_intent = self._cache[cache_key]
-            if time.time() - cached_time < self.cache_ttl:
-                in_stock = sum(1 for r in cached_results if r.in_stock)
-                return SearchResponse(
-                    query=query,
-                    country_code=country_code,
-                    total_results=len(cached_results),
-                    in_stock_count=in_stock,
-                    execution_time_ms=round((time.time() - start_time) * 1000, 2),
-                    stores_searched=[p.store_name for p in self.get_providers_for_query(query, country_code)],
-                    ai_intent=cached_intent,
-                    results=cached_results
-                )
-
-        providers = self.get_providers_for_query(query, country_code)
+        ai_intent = analyze_user_intent(query, country_code)
         
-        # Determine queries: primary query + top AI synonym if applicable
-        synonyms = ai_intent.get("synonyms", [])
-        alt_query = synonyms[0] if synonyms and synonyms[0].lower() != query.lower().strip() else None
-        local_query = ai_intent.get("local_query")
-
-        STORE_TIMEOUT_SECONDS = 8.0
-
-        async def query_provider(p: BaseProvider):
-            # Use local language query for domestic stores (e.g. 'lapte' for RO stores when user searches 'milk')
-            target_query = local_query if (local_query and p.country_code == country_code) else query
-            fallback_query = query if target_query != query else alt_query
-            try:
-                res = await asyncio.wait_for(p.search(target_query), timeout=STORE_TIMEOUT_SECONDS)
-                if fallback_query and len(res) < 3:
-                    try:
-                        res_alt = await asyncio.wait_for(p.search(fallback_query), timeout=STORE_TIMEOUT_SECONDS * 0.75)
-                        urls = {x.product_url for x in res}
-                        for it in res_alt:
-                            if it.product_url not in urls:
-                                res.append(it)
-                                urls.add(it.product_url)
-                    except Exception:
-                        pass
-                return res
-            except Exception as e:
-                print(f"[SearchEngine] Store '{p.store_name}' error: {e}")
-                return []
-
-        tasks = [asyncio.create_task(query_provider(p)) for p in providers]
-        responses = await asyncio.gather(*tasks, return_exceptions=True)
-
-        all_results: List[StoreResult] = []
-        stores_searched: List[str] = []
-        seen_urls = set()
-
-        for p, resp in zip(providers, responses):
-            stores_searched.append(p.store_name)
-            if isinstance(resp, list):
-                for idx, item in enumerate(resp):
-                    if item.product_url in seen_urls:
-                        continue
-                    seen_urls.add(item.product_url)
-
-                    branch_info = attach_branch_info(item.store_name, idx, user_lat, user_lon)
-                    if branch_info:
-                        item.store_branch = branch_info.get("store_branch")
-                        item.store_address = branch_info.get("store_address")
-                        item.latitude = branch_info.get("latitude")
-                        item.longitude = branch_info.get("longitude")
-                        item.distance_km = branch_info.get("distance_km")
-
-                    if item.in_stock:
-                        for alert in self.alert_manager.get_all_alerts():
-                            if not alert.is_triggered and alert.query.lower() in item.title.lower():
-                                self.alert_manager.mark_triggered(alert.id, item.price)
-
-                    all_results.append(item)
-            elif isinstance(resp, Exception):
-                print(f"[SearchEngine] Error from {p.store_name}: {resp}")
-
-        # AI Intent-Powered Smart Ranking
-        all_results.sort(
-            key=lambda item: score_with_ai_intent(query, item.title, item.price, item.in_stock, intent_info=ai_intent),
-            reverse=True
-        )
-
-        # Cache results
-        self._cache[cache_key] = (time.time(), all_results, ai_intent)
-
-        in_stock_count = sum(1 for r in all_results if r.in_stock)
+        cached_disk_items = await asyncio.to_thread(self.persistent_cache.get_cached_results, query, country_code)
+        in_stock_count = sum(1 for r in cached_disk_items if r.in_stock)
         elapsed_ms = round((time.time() - start_time) * 1000, 2)
 
         return SearchResponse(
             query=query,
             country_code=country_code,
-            total_results=len(all_results),
+            total_results=len(cached_disk_items),
             in_stock_count=in_stock_count,
             execution_time_ms=elapsed_ms,
-            stores_searched=stores_searched,
+            stores_searched=[],
             ai_intent=ai_intent,
-            results=all_results
+            results=cached_disk_items
         )
 
     async def stream_search(
@@ -472,42 +388,21 @@ class SearchEngine:
         country_code: str = "RO",
         user_lat: Optional[float] = None,
         user_lon: Optional[float] = None,
-        cached_only: bool = False
+        cached_only: bool = True
     ) -> AsyncGenerator[Dict, None]:
+        """
+        Pure Local Cache SSE Streamer:
+        ZERO server outbound scraper requests. Returns only existing NVMe database cache.
+        """
         country_code = country_code.upper()
         ai_intent = analyze_user_intent(query, country_code)
-        providers = self.get_providers_for_query(query, country_code)
 
-        # First yield the AI Intent detection payload to the UI
         yield {
             "type": "ai_intent",
             "payload": ai_intent
         }
 
-        # 1. High-speed in-memory cache check (< 1ms)
-        cache_key = f"{country_code}:{query.lower().strip()}"
-        if cache_key in self._cache:
-            cached_time, cached_results, cached_intent = self._cache[cache_key]
-            if time.time() - cached_time < self.cache_ttl:
-                store_items: Dict[str, list] = {}
-                for it in cached_results:
-                    store_items.setdefault(it.store_name, []).append(it)
-
-                for store_name, items in store_items.items():
-                    yield {
-                        "type": "provider_result",
-                        "payload": {
-                            "store_name": store_name,
-                            "store_icon": items[0].store_icon if items else "shopping-bag",
-                            "elapsed_ms": 0.5,
-                            "is_instant_cache": True,
-                            "items": [r.model_dump() for r in items]
-                        }
-                    }
-                return
-
-        # 2. TrueNAS Persistent Disk Cache Check (< 2ms)
-        # Yields existing catalog immediately to browser while live scrapers run in parallel!
+        # TrueNAS Persistent Disk Cache (< 2ms)
         cached_disk_items = await asyncio.to_thread(self.persistent_cache.get_cached_results, query, country_code)
         if cached_disk_items:
             store_items: Dict[str, list] = {}
@@ -526,85 +421,5 @@ class SearchEngine:
                     }
                 }
 
-        # If client requested cached_only, stop here to avoid making server outbound requests!
-        if cached_only:
-            return
-
-        synonyms = ai_intent.get("synonyms", [])
-        alt_query = synonyms[0] if synonyms and synonyms[0].lower() != query.lower().strip() else None
-        local_query = ai_intent.get("local_query")
-
-        STORE_STREAM_TIMEOUT = 8.0
-
-        async def run_provider(provider: BaseProvider):
-            start_p = time.time()
-            target_query = local_query if (local_query and provider.country_code == country_code) else query
-            fallback_query = query if target_query != query else alt_query
-            try:
-                res = await asyncio.wait_for(provider.search(target_query), timeout=STORE_STREAM_TIMEOUT)
-                if fallback_query and len(res) < 3:
-                    try:
-                        res_alt = await asyncio.wait_for(provider.search(fallback_query), timeout=STORE_STREAM_TIMEOUT * 0.75)
-                        urls = {x.product_url for x in res}
-                        for it in res_alt:
-                            if it.product_url not in urls:
-                                res.append(it)
-                                urls.add(it.product_url)
-                    except Exception:
-                        pass
-
-                # Attach physical store branch coordinates & distance
-                for idx, item in enumerate(res):
-                    branch_info = attach_branch_info(item.store_name, idx, user_lat, user_lon)
-                    if branch_info:
-                        item.store_branch = branch_info.get("store_branch")
-                        item.store_address = branch_info.get("store_address")
-                        item.latitude = branch_info.get("latitude")
-                        item.longitude = branch_info.get("longitude")
-                        item.distance_km = branch_info.get("distance_km")
-
-                return {
-                    "store_name": provider.store_name,
-                    "store_icon": provider.store_icon,
-                    "elapsed_ms": round((time.time() - start_p) * 1000, 1),
-                    "items": [r.model_dump() for r in res]
-                }
-            except Exception as e:
-                return {
-                    "store_name": provider.store_name,
-                    "store_icon": provider.store_icon,
-                    "elapsed_ms": round((time.time() - start_p) * 1000, 1),
-                    "error": str(e),
-                    "items": []
-                }
-
-        tasks = [asyncio.create_task(run_provider(p)) for p in providers]
-        cached_items_to_save: List[StoreResult] = []
-
-        for coro in asyncio.as_completed(tasks):
-            try:
-                res = await coro
-                if res and ("items" in res or "error" in res):
-                    yield {
-                        "type": "provider_result",
-                        "payload": res
-                    }
-                    if res.get("items"):
-                        parsed_items = []
-                        for it_data in res["items"]:
-                            try:
-                                parsed_items.append(StoreResult(**it_data))
-                            except Exception:
-                                pass
-                        if parsed_items:
-                            cached_items_to_save.extend(parsed_items)
-                            # Persist to SQLite in non-blocking background thread
-                            asyncio.create_task(
-                                asyncio.to_thread(self.persistent_cache.save_results, query, country_code, parsed_items)
-                            )
-            except Exception:
-                pass
-
-        # Cache results in memory for instantaneous re-access
-        if cached_items_to_save:
-            self._cache[cache_key] = (time.time(), cached_items_to_save, ai_intent)
+        # Hard stop: Never make outbound scraper calls from server!
+        return
